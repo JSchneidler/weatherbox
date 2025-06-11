@@ -1,0 +1,33 @@
+[project]
+name = "weatherbox"
+version = "0.1.0"
+description = ""
+authors = [
+    { name = "Jordan Schneidler", email = "jordan.schneidler@gmail.com" },
+]
+readme = "README.md"
+requires-python = ">=3.11.2"
+dependencies = [
+    "sqlmodel (>=0.0.24,<0.0.25)",
+    "fastapi (>=0.115.12,<0.116.0)",
+    "uvicorn[standard] (>=0.34.3,<0.35.0)",
+    "rpi-bme280 (>=0.2.4,<0.3.0)",
+    "apscheduler (>=3.11.0,<4.0.0)",
+]
+
+[tool.poetry]
+packages = [{ include = "weatherbox", from = "src" }]
+package-mode = false
+
+[tool.poetry.scripts]
+start = "src.weatherbox.main:start_server"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.4.0"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

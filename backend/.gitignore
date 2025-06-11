@@ -1,0 +1,7 @@
+*.pyc
+*.db
+
+images/
+*.jpg
+
+.vscode/
