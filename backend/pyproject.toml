@@ -16,11 +16,10 @@ dependencies = [
 ]
 
 [tool.poetry]
-packages = [{ include = "weatherbox", from = "src" }]
 package-mode = false
 
 [tool.poetry.scripts]
-start = "src.weatherbox.main:start_server"
+start = "weatherbox.main:start_server"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.4.0"
