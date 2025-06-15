@@ -1,41 +1,47 @@
-# import bme280
-# from smbus2 import SMBus
-
 from typing import NamedTuple
 
-from weatherbox.i2c_manager import i2c_manager
+import adafruit_bme680
+import board
+import busio
+
+I2C_ADDRESS = 0x77
+I2C_BUS = 1
+
+i2c_bus0 = busio.I2C(board.D1, board.D0)
+i2c_bus1 = board.I2C()
+
+bme680 = adafruit_bme680.Adafruit_BME680_I2C(i2c_bus1, I2C_ADDRESS)
+
+# For Denver, CO
+bme680.sea_level_pressure = 833.32
 
 
 class BME688Data(NamedTuple):
     temperature: float
     humidity: float
     pressure: float
-    iaq: int
+    gas: int
+    # iaq: int
 
 
-# bus = SMBus(1)
+def read() -> BME688Data:
+    return BME688Data(
+        temperature=round(bme680.temperature, 2),
+        humidity=round(bme680.relative_humidity, 2),
+        pressure=round(bme680.pressure, 2),
+        gas=bme680.gas,
+    )
 
 
-I2C_ADDRESS = 0x76
-I2C_BUS = 0
-
-# calibration_params = bme280.load_calibration_params(bus, I2C_ADDRESS)
-
-
-# def read():
-#     data = bme280.sample(bus, I2C_ADDRESS, calibration_params)
-#     return BME280Data(
-#         temperature=round(data.temperature, 2),
-#         humidity=round(data.humidity, 2),
-#         pressure=round(data.pressure, 2),
+# async def read() -> BME688Data:
+#     return BME688Data(
+#         temperature=round(bme680.temperature, 2),
+#         humidity=round(bme680.relative_humidity, 2),
+#         pressure=round(bme680.pressure, 2),
+#         gas=bme680.gas,
 #     )
 
 
-async def read() -> BME688Data:
-    async with i2c_manager.acquire_bus(I2C_BUS):
-        pass
-
-
-async def read_and_store():
-    async with i2c_manager.acquire_bus(I2C_BUS):
-        pass
+# async def read_and_store():
+#     async with i2c_manager.acquire_bus(I2C_BUS):
+#         pass

@@ -6,4 +6,4 @@ def test_bme688_read():
     assert isinstance(data.temperature, float)
     assert isinstance(data.pressure, float)
     assert isinstance(data.humidity, float)
-    assert isinstance(data.iaq, int)
+    assert isinstance(data.gas, int)

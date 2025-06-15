@@ -11,8 +11,11 @@ dependencies = [
     "sqlmodel (>=0.0.24,<0.0.25)",
     "fastapi (>=0.115.12,<0.116.0)",
     "uvicorn[standard] (>=0.34.3,<0.35.0)",
-    "rpi-bme280 (>=0.2.4,<0.3.0)",
     "apscheduler (>=3.11.0,<4.0.0)",
+    "adafruit-circuitpython-bme680 (>=3.7.12,<4.0.0)",
+    "adafruit-circuitpython-ltr390 (>=1.1.20,<2.0.0)",
+    "adafruit-circuitpython-ens160 (>=1.0.11,<2.0.0)",
+    "adafruit-circuitpython-as7341 (>=1.2.22,<2.0.0)",
 ]
 
 [tool.poetry]
