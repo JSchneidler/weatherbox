@@ -2,20 +2,16 @@ from datetime import datetime
 from typing import NamedTuple
 
 import adafruit_ens160
-import board
-import busio
 
 from weatherbox.db import get_session
 from weatherbox.models import ENS160
+from weatherbox.sensors.i2c_manager import get_i2c_bus, i2c_manager
 
 
 I2C_ADDRESS = 0x53
-I2C_BUS = 1
+I2C_BUS = 0
 
-i2c_bus0 = busio.I2C(board.D1, board.D0)
-i2c_bus1 = board.I2C()
-
-ens160 = adafruit_ens160.ENS160(i2c_bus0, I2C_ADDRESS)
+ens160 = adafruit_ens160.ENS160(get_i2c_bus(I2C_BUS), I2C_ADDRESS)
 
 
 class ENS160Data(NamedTuple):
@@ -24,16 +20,17 @@ class ENS160Data(NamedTuple):
     eco2: int
 
 
-def read() -> ENS160Data:
-    return ENS160Data(
-        aqi=ens160.AQI,
-        tvoc=ens160.TVOC,
-        eco2=ens160.eCO2,
-    )
+async def read() -> ENS160Data:
+    async with i2c_manager.acquire_bus(I2C_BUS):
+        return ENS160Data(
+            aqi=ens160.AQI,
+            tvoc=ens160.TVOC,
+            eco2=ens160.eCO2,
+        )
 
 
-def read_and_store():
-    data = read()
+async def read_and_store():
+    data = await read()
 
     ens160_data = ENS160(
         timestamp=datetime.now().isoformat(),

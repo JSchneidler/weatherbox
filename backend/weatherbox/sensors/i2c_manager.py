@@ -1,5 +1,20 @@
 import asyncio
 from contextlib import asynccontextmanager
+import board
+import busio
+
+
+i2c_bus0 = busio.I2C(board.D1, board.D0)
+i2c_bus1 = board.I2C()
+
+
+def get_i2c_bus(bus_number: int):
+    if bus_number == 0:
+        return i2c_bus0
+    elif bus_number == 1:
+        return i2c_bus1
+    else:
+        raise ValueError(f"Invalid I2C bus number: {bus_number}")
 
 
 class I2CManager:

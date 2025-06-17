@@ -6,7 +6,7 @@ from fastapi import FastAPI
 import uvicorn
 
 from weatherbox.scheduler import scheduler
-from weatherbox.sensors.as3935.as3935 import setup_trigger
+from weatherbox.sensors.as3935 import setup_trigger
 
 # from weatherbox.camera.stream import generate_frames
 

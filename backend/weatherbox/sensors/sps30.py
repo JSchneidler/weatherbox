@@ -1,11 +1,14 @@
 import sys
 import threading
 import logging
-from time import sleep
 from queue import Queue
 from datetime import datetime
-from weatherbox.i2c import I2C
-from weatherbox.i2c_manager import i2c_manager
+from typing import Dict, NamedTuple
+import asyncio
+
+from weatherbox.db import get_session
+from weatherbox.models import SPS30 as SPS30Model
+from weatherbox.sensors.i2c import I2C
 
 I2C_ADDRESS = 0x69
 I2C_BUS = 1
@@ -45,6 +48,12 @@ SIZE_FLOAT = 6  # IEEE754 float
 SIZE_INTEGER = 3  # unsigned 16 bit integer
 
 
+class SPS30Data(NamedTuple):
+    mass_density: Dict[str, float]
+    particle_count: Dict[str, float]
+    particle_size: float
+
+
 class SPS30:
 
     def __init__(
@@ -81,18 +90,18 @@ class SPS30:
         # so the calculated value has to be masked with 0xFF
         return crc & 0x0000FF
 
-    def firmware_version(self) -> str:
-        self.i2c.write(CMD_FIRMWARE_VERSION)
-        data = self.i2c.read(NBYTES_FIRMWARE_VERSION)
+    async def firmware_version(self) -> str:
+        await self.write(CMD_FIRMWARE_VERSION)
+        data = await self.read(NBYTES_FIRMWARE_VERSION)
 
         if self.crc_calc(data[:2]) != data[2]:
             return "CRC mismatched"
 
         return ".".join(map(str, data[:2]))
 
-    def product_type(self) -> str:
-        self.i2c.write(CMD_PRODUCT_TYPE)
-        data = self.i2c.read(NBYTES_PRODUCT_TYPE)
+    async def product_type(self) -> str:
+        await self.write(CMD_PRODUCT_TYPE)
+        data = await self.read(NBYTES_PRODUCT_TYPE)
         result = ""
 
         for i in range(0, NBYTES_PRODUCT_TYPE, 3):
@@ -103,9 +112,9 @@ class SPS30:
 
         return result
 
-    def serial_number(self) -> str:
-        self.i2c.write(CMD_SERIAL_NUMBER)
-        data = self.i2c.read(NBYTES_SERIAL_NUMBER)
+    async def serial_number(self) -> str:
+        await self.write(CMD_SERIAL_NUMBER)
+        data = await self.read(NBYTES_SERIAL_NUMBER)
         result = ""
 
         for i in range(0, NBYTES_SERIAL_NUMBER, PACKET_SIZE):
@@ -116,9 +125,9 @@ class SPS30:
 
         return result
 
-    def read_status_register(self) -> dict:
-        self.i2c.write(CMD_READ_STATUS_REGISTER)
-        data = self.i2c.read(NBYTES_READ_STATUS_REGISTER)
+    async def read_status_register(self) -> dict:
+        await self.write(CMD_READ_STATUS_REGISTER)
+        data = await self.read(NBYTES_READ_STATUS_REGISTER)
 
         status = []
         for i in range(0, NBYTES_READ_STATUS_REGISTER, PACKET_SIZE):
@@ -140,12 +149,12 @@ class SPS30:
             "fan_status": fan_status,
         }
 
-    def clear_status_register(self) -> None:
-        self.i2c.write(CMD_CLEAR_STATUS_REGISTER)
+    async def clear_status_register(self) -> None:
+        await self.i2c.write(CMD_CLEAR_STATUS_REGISTER)
 
-    def read_data_ready_flag(self) -> bool:
-        self.i2c.write(CMD_READ_DATA_READY_FLAG)
-        data = self.i2c.read(NBYTES_READ_DATA_READY_FLAG)
+    async def read_data_ready_flag(self) -> bool:
+        await self.write(CMD_READ_DATA_READY_FLAG)
+        data = await self.read(NBYTES_READ_DATA_READY_FLAG)
 
         if self.crc_calc(data[:2]) != data[2]:
             if self.logger:
@@ -167,18 +176,18 @@ class SPS30:
 
         return True if data[1] == 1 else False
 
-    def sleep(self) -> None:
-        self.i2c.write(CMD_SLEEP)
+    async def sleep(self) -> None:
+        await self.i2c.write(CMD_SLEEP)
 
-    def wakeup(self) -> None:
-        self.i2c.write(CMD_WAKEUP)
+    async def wakeup(self) -> None:
+        await self.i2c.write(CMD_WAKEUP)
 
-    def start_fan_cleaning(self) -> None:
-        self.i2c.write(CMD_START_FAN_CLEANING)
+    async def start_fan_cleaning(self) -> None:
+        await self.i2c.write(CMD_START_FAN_CLEANING)
 
-    def read_auto_cleaning_interval(self) -> int:
-        self.i2c.write(CMD_AUTO_CLEANING_INTERVAL)
-        data = self.i2c.read(NBYTES_AUTO_CLEANING_INTERVAL)
+    async def read_auto_cleaning_interval(self) -> int:
+        await self.write(CMD_AUTO_CLEANING_INTERVAL)
+        data = await self.read(NBYTES_AUTO_CLEANING_INTERVAL)
 
         interval = []
         for i in range(0, NBYTES_AUTO_CLEANING_INTERVAL, 3):
@@ -189,7 +198,7 @@ class SPS30:
 
         return interval[0] << 24 | interval[1] << 16 | interval[2] << 8 | interval[3]
 
-    def write_auto_cleaning_interval_days(self, days: int) -> int:
+    async def write_auto_cleaning_interval_days(self, days: int) -> int:
         seconds = days * 86400  # 1day = 86400sec
         interval = []
         interval.append((seconds & 0xFF000000) >> 24)
@@ -201,12 +210,12 @@ class SPS30:
         data.append(self.crc_calc(data[2:4]))
         data.extend([interval[2], interval[3]])
         data.append(self.crc_calc(data[5:7]))
-        self.i2c.write(data)
-        sleep(0.05)
-        return self.read_auto_cleaning_interval()
+        await self.i2c.write(data)
+        await asyncio.sleep(0.05)
+        return await self.read_auto_cleaning_interval()
 
-    def reset(self) -> None:
-        self.i2c.write(CMD_RESET)
+    async def reset(self) -> None:
+        await self.i2c.write(CMD_RESET)
 
     def __ieee754_number_conversion(self, data: int) -> float:
         binary = "{:032b}".format(data)
@@ -338,14 +347,14 @@ class SPS30:
             size[0] << 24 | size[1] << 16 | size[2] << 8 | size[3]
         )
 
-    def __read_measured_value(self) -> None:
+    async def __read_measured_value(self) -> None:
         while True:
             try:
-                if not self.read_data_ready_flag():
+                if not await self.read_data_ready_flag():
                     continue
 
-                self.i2c.write(CMD_READ_MEASURED_VALUES)
-                data = self.i2c.read(NBYTES_MEASURED_VALUES_FLOAT)
+                await self.write(CMD_READ_MEASURED_VALUES)
+                data = await self.read(NBYTES_MEASURED_VALUES_FLOAT)
 
                 if self.__data.full():
                     self.__data.get()
@@ -372,7 +381,7 @@ class SPS30:
                 else:
                     print("Stopping measurement...")
 
-                self.stop_measurement()
+                await self.stop_measurement()
                 sys.exit()
 
             except Exception as e:
@@ -382,37 +391,86 @@ class SPS30:
                     print(f"{type(e).__name__}: {e}")
 
             finally:
-                sleep(self.sampling_period)
+                await asyncio.sleep(self.sampling_period)
 
-    def start_measurement(self) -> None:
+    async def start_measurement(self) -> None:
         data_format = {"IEEE754_float": 0x03, "unsigned_16_bit_integer": 0x05}
 
         data = CMD_START_MEASUREMENT
         data.extend([data_format["IEEE754_float"], 0x00])
         data.append(self.crc_calc(data[2:4]))
-        self.i2c.write(data)
-        sleep(0.05)
+        await self.i2c.write(data)
+        await asyncio.sleep(0.05)
         self.__run()
 
-    def get_measurement(self) -> dict:
-        if self.__data.empty():
+    async def read(self, nbytes: int) -> list:
+        return await self.i2c.read(nbytes)
+
+    async def write(self, data: list) -> None:
+        await self.i2c.write(data)
+
+    async def get_measurement(self) -> dict:
+        if not await self.read_data_ready_flag():
             return {}
 
-        return self.__data.get()
+        await self.write(CMD_READ_MEASURED_VALUES)
+        data = await self.read(NBYTES_MEASURED_VALUES_FLOAT)
 
-    def stop_measurement(self) -> None:
-        self.i2c.write(CMD_STOP_MEASUREMENT)
+        result = {
+            "sensor_data": {
+                "mass_density": self.__mass_density_measurement(data[:24]),
+                "particle_count": self.__particle_count_measurement(data[24:54]),
+                "particle_size": self.__particle_size_measurement(data[54:]),
+                "mass_density_unit": "ug/m3",
+                "particle_count_unit": "#/cm3",
+                "particle_size_unit": "um",
+            },
+            "timestamp": int(datetime.now().timestamp()),
+        }
+
+        return result if all(self.__valid.values()) else {}
+
+    async def stop_measurement(self) -> None:
+        await self.i2c.write(CMD_STOP_MEASUREMENT)
         self.i2c.close()
 
     def __run(self) -> None:
-        threading.Thread(target=self.__read_measured_value, daemon=True).start()
+        asyncio.create_task(self.__read_measured_value())
 
 
-# async def read():
-#     async with i2c_manager.acquire_bus(I2C_BUS):
-#         pass
+async def read() -> SPS30Data:
+    sensor = SPS30()
+    await sensor.start_measurement()
+
+    while not await sensor.read_data_ready_flag():
+        await asyncio.sleep(0.1)
+
+    data = await sensor.get_measurement()
+    await sensor.stop_measurement()
+
+    return SPS30Data(
+        mass_density=data["sensor_data"]["mass_density"],
+        particle_count=data["sensor_data"]["particle_count"],
+        particle_size=data["sensor_data"]["particle_size"]
+    )
 
 
-# async def read_and_store():
-#     async with i2c_manager.acquire_bus(I2C_BUS):
-#         pass
+async def read_and_store():
+    data = await read()
+
+    sps30_data = SPS30Model(
+        timestamp=datetime.now().isoformat(),
+        pm10=data.mass_density["pm1.0"],
+        pm25=data.mass_density["pm2.5"],
+        pm40=data.mass_density["pm4.0"],
+        pm100=data.mass_density["pm10"],
+        nc05=data.particle_count["pm0.5"],
+        nc10=data.particle_count["pm1.0"],
+        nc25=data.particle_count["pm2.5"],
+        nc40=data.particle_count["pm4.0"],
+        nc100=data.particle_count["pm10"],
+        typical_particle_size=data.particle_size,
+    )
+    session = get_session()
+    session.add(sps30_data)
+    session.commit()

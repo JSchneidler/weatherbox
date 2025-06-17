@@ -2,19 +2,15 @@ from datetime import datetime
 from typing import NamedTuple
 
 import adafruit_ltr390
-import board
-import busio
 
 from weatherbox.db import get_session
 from weatherbox.models import LTR390
+from weatherbox.sensors.i2c_manager import get_i2c_bus, i2c_manager
 
 I2C_ADDRESS = 0x53
 I2C_BUS = 1
 
-i2c_bus0 = busio.I2C(board.D1, board.D0)
-i2c_bus1 = board.I2C()
-
-ltr390 = adafruit_ltr390.LTR390(i2c_bus1, I2C_ADDRESS)
+ltr390 = adafruit_ltr390.LTR390(get_i2c_bus(I2C_BUS), I2C_ADDRESS)
 
 
 class LTR390Data(NamedTuple):
@@ -22,12 +18,13 @@ class LTR390Data(NamedTuple):
     uvs: int
 
 
-def read():
-    return LTR390Data(light=ltr390.light, uvs=ltr390.uvs)
+async def read() -> LTR390Data:
+    async with i2c_manager.acquire_bus(I2C_BUS):
+        return LTR390Data(light=ltr390.light, uvs=ltr390.uvs)
 
 
-def read_and_store():
-    data = read()
+async def read_and_store():
+    data = await read()
 
     ltr390_data = LTR390(
         timestamp=datetime.now().isoformat(),

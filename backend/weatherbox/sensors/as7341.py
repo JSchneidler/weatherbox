@@ -2,19 +2,17 @@ from datetime import datetime
 from typing import NamedTuple
 
 import adafruit_as7341
-import board
-import busio
+
 
 from weatherbox.db import get_session
 from weatherbox.models import AS7341
+from weatherbox.sensors.i2c_manager import get_i2c_bus, i2c_manager
 
 I2C_ADDRESS = 0x39
-I2C_BUS = 0
+I2C_BUS = 1
 
-i2c_bus0 = busio.I2C(board.D1, board.D0)
-i2c_bus1 = board.I2C()
 
-as7341 = adafruit_as7341.AS7341(i2c_bus1, I2C_ADDRESS)
+as7341 = adafruit_as7341.AS7341(get_i2c_bus(I2C_BUS), I2C_ADDRESS)
 
 
 class AS7341Data(NamedTuple):
@@ -30,23 +28,24 @@ class AS7341Data(NamedTuple):
     nir: int
 
 
-def read() -> AS7341Data:
-    return AS7341Data(
-        violet=as7341.channel_415nm,
-        indigo=as7341.channel_445nm,
-        blue=as7341.channel_480nm,
-        cyan=as7341.channel_515nm,
-        green=as7341.channel_555nm,
-        yellow=as7341.channel_590nm,
-        orange=as7341.channel_630nm,
-        red=as7341.channel_680nm,
-        clear=as7341.channel_clear,
-        nir=as7341.channel_nir,
-    )
+async def read() -> AS7341Data:
+    async with i2c_manager.acquire_bus(I2C_BUS):
+        return AS7341Data(
+            violet=as7341.channel_415nm,
+            indigo=as7341.channel_445nm,
+            blue=as7341.channel_480nm,
+            cyan=as7341.channel_515nm,
+            green=as7341.channel_555nm,
+            yellow=as7341.channel_590nm,
+            orange=as7341.channel_630nm,
+            red=as7341.channel_680nm,
+            clear=as7341.channel_clear,
+            nir=as7341.channel_nir,
+        )
 
 
-def read_and_store():
-    data = read()
+async def read_and_store():
+    data = await read()
 
     as7341_data = AS7341(
         timestamp=datetime.now().isoformat(),
