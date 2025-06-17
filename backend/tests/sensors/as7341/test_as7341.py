@@ -1,5 +1,5 @@
 def test_as7341_read():
-    from weatherbox.sensors.as7341.as7341 import read
+    from weatherbox.sensors.as7341 import read
 
     data = read()
     assert data is not None

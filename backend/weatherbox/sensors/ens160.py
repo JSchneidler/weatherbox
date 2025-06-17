@@ -1,8 +1,12 @@
+from datetime import datetime
 from typing import NamedTuple
 
 import adafruit_ens160
 import board
 import busio
+
+from weatherbox.db import get_session
+from weatherbox.models import ENS160
 
 
 I2C_ADDRESS = 0x53
@@ -26,3 +30,17 @@ def read() -> ENS160Data:
         tvoc=ens160.TVOC,
         eco2=ens160.eCO2,
     )
+
+
+def read_and_store():
+    data = read()
+
+    ens160_data = ENS160(
+        timestamp=datetime.now().isoformat(),
+        aqi=data.aqi,
+        tvoc=data.tvoc,
+        eco2=data.eco2,
+    )
+    session = get_session()
+    session.add(ens160_data)
+    session.commit()

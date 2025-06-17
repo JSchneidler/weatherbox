@@ -1,9 +1,12 @@
+from datetime import datetime
 from typing import NamedTuple
 
 import adafruit_as7341
 import board
 import busio
 
+from weatherbox.db import get_session
+from weatherbox.models import AS7341
 
 I2C_ADDRESS = 0x39
 I2C_BUS = 0
@@ -40,3 +43,24 @@ def read() -> AS7341Data:
         clear=as7341.channel_clear,
         nir=as7341.channel_nir,
     )
+
+
+def read_and_store():
+    data = read()
+
+    as7341_data = AS7341(
+        timestamp=datetime.now().isoformat(),
+        violet=data.violet,
+        indigo=data.indigo,
+        blue=data.blue,
+        cyan=data.cyan,
+        green=data.green,
+        yellow=data.yellow,
+        orange=data.orange,
+        red=data.red,
+        clear=data.clear,
+        nir=data.nir,
+    )
+    session = get_session()
+    session.add(as7341_data)
+    session.commit()

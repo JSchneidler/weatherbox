@@ -1,5 +1,5 @@
 from weatherbox.db import get_session
-from weatherbox.models.AS3935 import AS3935
+from weatherbox.models import AS3935
 
 I2C_ADDRESS = 0x03
 I2C_BUS = 1

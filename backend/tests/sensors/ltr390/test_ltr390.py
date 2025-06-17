@@ -1,5 +1,5 @@
 def test_ltr390_read():
-    from weatherbox.sensors.ltr390.ltr390 import read
+    from weatherbox.sensors.ltr390 import read
 
     data = read()
     assert data is not None

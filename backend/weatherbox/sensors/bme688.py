@@ -1,8 +1,12 @@
+from datetime import datetime
 from typing import NamedTuple
 
 import adafruit_bme680
 import board
 import busio
+
+from weatherbox.db import get_session
+from weatherbox.models import BME688
 
 I2C_ADDRESS = 0x77
 I2C_BUS = 1
@@ -21,16 +25,33 @@ class BME688Data(NamedTuple):
     humidity: float
     pressure: float
     gas: int
-    # iaq: int
+    altitude: float
 
 
 def read() -> BME688Data:
     return BME688Data(
-        temperature=round(bme680.temperature, 2),
-        humidity=round(bme680.relative_humidity, 2),
-        pressure=round(bme680.pressure, 2),
+        temperature=bme680.temperature,
+        humidity=bme680.relative_humidity,
+        pressure=bme680.pressure,
         gas=bme680.gas,
+        altitude=bme680.altitude,
     )
+
+
+def read_and_store():
+    data = read()
+
+    bme688_data = BME688(
+        timestamp=datetime.now().isoformat(),
+        temperature=data.temperature,
+        humidity=data.humidity,
+        pressure=data.pressure,
+        gas=data.gas,
+        altitude=data.altitude,
+    )
+    session = get_session()
+    session.add(bme688_data)
+    session.commit()
 
 
 # async def read() -> BME688Data:

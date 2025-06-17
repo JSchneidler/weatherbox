@@ -1,5 +1,5 @@
 def test_sps30_read():
-    from weatherbox.sensors.sps30.sps30 import SPS30
+    from weatherbox.sensors.sps30 import SPS30
 
     sps30 = SPS30()
     assert sps30.firmware_version() == "2.3"
@@ -16,7 +16,7 @@ def test_sps30_read():
 
 def test_sps30_read_measurement():
     from time import sleep
-    from weatherbox.sensors.sps30.sps30 import SPS30
+    from weatherbox.sensors.sps30 import SPS30
 
     sps30 = SPS30()
     sps30.start_measurement()

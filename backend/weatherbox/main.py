@@ -1,12 +1,14 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from fastapi.responses import StreamingResponse
+
+# from fastapi.responses import StreamingResponse
 import uvicorn
 
 from weatherbox.scheduler import scheduler
 from weatherbox.sensors.as3935.as3935 import setup_trigger
-from weatherbox.camera.stream import generate_frames
+
+# from weatherbox.camera.stream import generate_frames
 
 
 @asynccontextmanager
@@ -28,11 +30,11 @@ def health_check():
     return {"status": "ok", "message": "WeatherBox service is running."}
 
 
-@app.get("/mjpeg")
-async def mjpeg():
-    return StreamingResponse(
-        generate_frames(), media_type="multipart/x-mixed-replace; boundary=frame"
-    )
+# @app.get("/mjpeg")
+# async def mjpeg():
+#     return StreamingResponse(
+#         generate_frames(), media_type="multipart/x-mixed-replace; boundary=frame"
+#     )
 
 
 def start_server():

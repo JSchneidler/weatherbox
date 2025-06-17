@@ -39,7 +39,7 @@ class StreamingOutput(io.BufferedIOBase):
             return self.frame
 
 
-picam2 = Picamera2(camera_num=1)
+picam2 = Picamera2(camera_num=0)
 video_config = picam2.create_video_configuration(main={"size": (1920, 1080)})
 picam2.configure(video_config)
 output = StreamingOutput()
@@ -52,21 +52,21 @@ def stop():
     picam2.close()
 
 
-class StreamManager:
-    def __init__(self):
-        self.camera = Picamera2(camera_num=1)
-        self.video_config = self.camera.create_video_configuration(
-            main={"size": (1920, 1080)}
-        )
-        self.camera.configure(self.video_config)
-        self.output = StreamingOutput()
-        self.camera.start_recording(
-            MJPEGEncoder(), FileOutput(self.output), Quality.VERY_HIGH
-        )
+# class StreamManager:
+#     def __init__(self):
+#         self.camera = Picamera2(camera_num=0)
+#         self.video_config = self.camera.create_video_configuration(
+#             main={"size": (1920, 1080)}
+#         )
+#         self.camera.configure(self.video_config)
+#         self.output = StreamingOutput()
+#         self.camera.start_recording(
+#             MJPEGEncoder(), FileOutput(self.output), Quality.VERY_HIGH
+#         )
 
-    def stop(self):
-        self.camera.stop()
-        self.camera.close()
+#     def stop(self):
+#         self.camera.stop()
+#         self.camera.close()
 
-    def get_frame(self):
-        return self.output.read()
+#     def get_frame(self):
+#         return self.output.read()
