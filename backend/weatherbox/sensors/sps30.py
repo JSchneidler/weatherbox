@@ -400,7 +400,8 @@ class SPS30:
         data.extend([data_format["IEEE754_float"], 0x00])
         data.append(self.crc_calc(data[2:4]))
         await self.i2c.write(data)
-        await asyncio.sleep(0.05)
+        # await asyncio.sleep(0.05)
+        await asyncio.sleep(30)  # Wait for the sensor to start
         self.__run()
 
     async def read(self, nbytes: int) -> list:
@@ -451,7 +452,7 @@ async def read() -> SPS30Data:
     return SPS30Data(
         mass_density=data["sensor_data"]["mass_density"],
         particle_count=data["sensor_data"]["particle_count"],
-        particle_size=data["sensor_data"]["particle_size"]
+        particle_size=data["sensor_data"]["particle_size"],
     )
 
 

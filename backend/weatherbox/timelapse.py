@@ -2,7 +2,7 @@ from datetime import datetime
 
 from .camera.arducam import capture_and_save_image
 from .db import get_session, db_now
-from .models.TimelapseImage import TimelapseImage
+from weatherbox.models import TimelapseImage
 
 IMAGE_DIR = "/home/jordan/code/weatherbox/images"
 

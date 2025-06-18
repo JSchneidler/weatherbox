@@ -9,7 +9,7 @@ from weatherbox.models import AS7341
 from weatherbox.sensors.i2c_manager import get_i2c_bus, i2c_manager
 
 I2C_ADDRESS = 0x39
-I2C_BUS = 1
+I2C_BUS = 0
 
 
 as7341 = adafruit_as7341.AS7341(get_i2c_bus(I2C_BUS), I2C_ADDRESS)

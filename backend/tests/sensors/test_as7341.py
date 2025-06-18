@@ -1,7 +1,11 @@
-def test_as7341_read():
+import pytest
+
+
+@pytest.mark.asyncio
+async def test_as7341_read():
     from weatherbox.sensors.as7341 import read
 
-    data = read()
+    data = await read()
     assert data is not None
     assert isinstance(data.violet, int)
     assert isinstance(data.indigo, int)

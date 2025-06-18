@@ -8,7 +8,7 @@ from weatherbox.models import LTR390
 from weatherbox.sensors.i2c_manager import get_i2c_bus, i2c_manager
 
 I2C_ADDRESS = 0x53
-I2C_BUS = 1
+I2C_BUS = 0
 
 ltr390 = adafruit_ltr390.LTR390(get_i2c_bus(I2C_BUS), I2C_ADDRESS)
 

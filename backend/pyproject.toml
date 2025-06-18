@@ -16,6 +16,7 @@ dependencies = [
     "adafruit-circuitpython-ltr390 (>=1.1.20,<2.0.0)",
     "adafruit-circuitpython-ens160 (>=1.0.11,<2.0.0)",
     "adafruit-circuitpython-as7341 (>=1.2.22,<2.0.0)",
+    "pytest-asyncio (>=1.0.0,<2.0.0)",
 ]
 
 [tool.poetry]

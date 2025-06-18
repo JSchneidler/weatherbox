@@ -1,7 +1,11 @@
-def test_bme688_read():
+import pytest
+
+
+@pytest.mark.asyncio
+async def test_bme688_read():
     from weatherbox.sensors.bme688 import read
 
-    data = read()
+    data = await read()
     assert data is not None
     assert isinstance(data.temperature, float)
     assert isinstance(data.pressure, float)

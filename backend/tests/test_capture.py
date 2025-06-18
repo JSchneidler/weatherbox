@@ -3,7 +3,7 @@ import os
 from sqlmodel import select
 from weatherbox.db import get_session
 from weatherbox.timelapse import capture
-from weatherbox.models.TimelapseImage import TimelapseImage
+from weatherbox.models import TimelapseImage
 
 IMAGE_DIR = "/home/jordan/code/weatherbox/images"
 

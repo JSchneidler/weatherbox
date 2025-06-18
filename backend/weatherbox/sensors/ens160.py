@@ -9,7 +9,7 @@ from weatherbox.sensors.i2c_manager import get_i2c_bus, i2c_manager
 
 
 I2C_ADDRESS = 0x53
-I2C_BUS = 0
+I2C_BUS = 1
 
 ens160 = adafruit_ens160.ENS160(get_i2c_bus(I2C_BUS), I2C_ADDRESS)
 

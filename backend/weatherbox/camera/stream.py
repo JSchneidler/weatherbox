@@ -8,6 +8,9 @@ from picamera2.encoders import MJPEGEncoder, Quality
 from picamera2.outputs import FileOutput
 
 
+CAMERA_NUM = 1
+
+
 def generate_frames():
     while True:
         try:
@@ -39,7 +42,7 @@ class StreamingOutput(io.BufferedIOBase):
             return self.frame
 
 
-picam2 = Picamera2(camera_num=0)
+picam2 = Picamera2(camera_num=CAMERA_NUM)
 video_config = picam2.create_video_configuration(main={"size": (1920, 1080)})
 picam2.configure(video_config)
 output = StreamingOutput()
