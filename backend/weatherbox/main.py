@@ -2,17 +2,15 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlmodel import select, col
 from fastapi.responses import StreamingResponse
+import psutil
 import uvicorn
 
 from weatherbox.scheduler import initialize_and_start_scheduler, shutdown_scheduler
 from weatherbox.sensor_manager import sensor_manager
 
 from weatherbox.camera.stream import generate_frames
-from weatherbox.db import get_session
-
-from weatherbox.models import AS7341, BME688, ENS160, LTR390, SPS30
+from weatherbox.routes import router as data_router
 
 
 @asynccontextmanager
@@ -34,6 +32,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Include the data routes
+app.include_router(data_router, prefix="/data", tags=["sensor data"])
+
 
 @app.get("/health")
 def health_check():
@@ -54,34 +55,26 @@ def get_sensor_status():
     }
 
 
+@app.get("/system/stats")
+def get_system_stats():
+    """
+    Get the system stats.
+    """
+    return {
+        "cpu_usage": psutil.cpu_percent(),
+        "memory_usage": psutil.virtual_memory().percent,
+        "disk_usage": psutil.disk_usage("/").percent,
+        "uptime": psutil.boot_time(),
+        "fan_rpm": psutil.sensors_fans()["pwmfan"][0][1],
+        "cpu_temperature": psutil.sensors_temperatures()["cpu_thermal"][0][1],
+    }
+
+
 @app.get("/mjpeg")
 async def mjpeg():
     return StreamingResponse(
         generate_frames(), media_type="multipart/x-mixed-replace; boundary=frame"
     )
-
-
-@app.get("/data")
-def get_data():
-    session = get_session()
-    data = {
-        "ltr390": session.exec(
-            select(LTR390).order_by(col(LTR390.timestamp).desc()).limit(1000)
-        ).all(),
-        "as7341": session.exec(
-            select(AS7341).order_by(col(AS7341.timestamp).desc()).limit(1000)
-        ).all(),
-        "bme688": session.exec(
-            select(BME688).order_by(col(BME688.timestamp).desc()).limit(1000)
-        ).all(),
-        "ens160": session.exec(
-            select(ENS160).order_by(col(ENS160.timestamp).desc()).limit(1000)
-        ).all(),
-        "sps30": session.exec(
-            select(SPS30).order_by(col(SPS30.timestamp).desc()).limit(1000)
-        ).all(),
-    }
-    return data
 
 
 def start_server():

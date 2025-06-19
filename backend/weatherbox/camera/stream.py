@@ -3,6 +3,8 @@ import io
 import logging
 from threading import Condition
 
+from libcamera import Transform
+
 from picamera2 import Picamera2
 from picamera2.encoders import MJPEGEncoder, Quality
 from picamera2.outputs import FileOutput
@@ -43,7 +45,10 @@ class StreamingOutput(io.BufferedIOBase):
 
 
 picam2 = Picamera2(camera_num=CAMERA_NUM)
-video_config = picam2.create_video_configuration(main={"size": (1920, 1080)})
+video_config = picam2.create_video_configuration(
+    main={"size": (1920, 1080)},
+    transform=Transform(hflip=True, vflip=True),
+)
 picam2.configure(video_config)
 output = StreamingOutput()
 picam2.start_recording(MJPEGEncoder(), FileOutput(output), Quality.VERY_HIGH)

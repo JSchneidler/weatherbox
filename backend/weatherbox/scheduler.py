@@ -81,8 +81,8 @@ async def add_sensor_jobs():
             async def sps30_wrapper():
                 await sample_sps30(sps30_instance)
 
-            scheduler.add_job(sps30_wrapper, "interval", seconds=5)
-            logger.info("Added SPS30 job (5s interval)")
+            scheduler.add_job(sps30_wrapper, "interval", seconds=15)
+            logger.info("Added SPS30 job (15s interval)")
         else:
             logger.error("SPS30 instance not available despite status being ready")
 
@@ -92,7 +92,7 @@ async def add_sensor_jobs():
     #     logger.info("Added AS3935 job (15s interval)")
 
     # TODO: Add timelapse job when implemented
-    # scheduler.add_job(capture, "interval", seconds=30)
+    # scheduler.add_job(capture, "interval", seconds=60)
 
     logger.info("All sensor jobs added to scheduler")
 
