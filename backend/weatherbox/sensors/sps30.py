@@ -400,8 +400,7 @@ class SPS30:
         data.extend([data_format["IEEE754_float"], 0x00])
         data.append(self.crc_calc(data[2:4]))
         await self.i2c.write(data)
-        # await asyncio.sleep(0.05)
-        await asyncio.sleep(30)  # Wait for the sensor to start
+        await asyncio.sleep(0.05)
         self.__run()
 
     async def read(self, nbytes: int) -> list:
@@ -433,7 +432,7 @@ class SPS30:
 
     async def stop_measurement(self) -> None:
         await self.i2c.write(CMD_STOP_MEASUREMENT)
-        self.i2c.close()
+        # self.i2c.close()
 
     def __run(self) -> None:
         asyncio.create_task(self.__read_measured_value())
@@ -456,21 +455,31 @@ async def read() -> SPS30Data:
     )
 
 
-async def read_and_store():
-    data = await read()
+async def read_and_store_with_instance(sps30_instance: SPS30):
+    """
+    Read and store SPS30 data using an existing SPS30 instance.
+    This is more efficient than creating a new instance each time.
+    """
+    if not await sps30_instance.read_data_ready_flag():
+        return  # No data ready, skip this reading
+
+    data = await sps30_instance.get_measurement()
+
+    if not data:  # Empty data, skip this reading
+        return
 
     sps30_data = SPS30Model(
         timestamp=datetime.now().isoformat(),
-        pm10=data.mass_density["pm1.0"],
-        pm25=data.mass_density["pm2.5"],
-        pm40=data.mass_density["pm4.0"],
-        pm100=data.mass_density["pm10"],
-        nc05=data.particle_count["pm0.5"],
-        nc10=data.particle_count["pm1.0"],
-        nc25=data.particle_count["pm2.5"],
-        nc40=data.particle_count["pm4.0"],
-        nc100=data.particle_count["pm10"],
-        typical_particle_size=data.particle_size,
+        pm10=data["sensor_data"]["mass_density"]["pm1.0"],
+        pm25=data["sensor_data"]["mass_density"]["pm2.5"],
+        pm40=data["sensor_data"]["mass_density"]["pm4.0"],
+        pm100=data["sensor_data"]["mass_density"]["pm10"],
+        nc05=data["sensor_data"]["particle_count"]["pm0.5"],
+        nc10=data["sensor_data"]["particle_count"]["pm1.0"],
+        nc25=data["sensor_data"]["particle_count"]["pm2.5"],
+        nc40=data["sensor_data"]["particle_count"]["pm4.0"],
+        nc100=data["sensor_data"]["particle_count"]["pm10"],
+        typical_particle_size=data["sensor_data"]["particle_size"],
     )
     session = get_session()
     session.add(sps30_data)

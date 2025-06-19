@@ -2,12 +2,12 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlmodel import select
+from sqlmodel import select, col
 from fastapi.responses import StreamingResponse
 import uvicorn
 
-from weatherbox.scheduler import scheduler
-from weatherbox.sensors.as3935 import setup_trigger
+from weatherbox.scheduler import initialize_and_start_scheduler, shutdown_scheduler
+from weatherbox.sensor_manager import sensor_manager
 
 from weatherbox.camera.stream import generate_frames
 from weatherbox.db import get_session
@@ -17,10 +17,11 @@ from weatherbox.models import AS7341, BME688, ENS160, LTR390, SPS30
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    # scheduler.start()
-    setup_trigger()
+    # Initialize sensors and start scheduler
+    await initialize_and_start_scheduler()
     yield
-    # scheduler.shutdown()
+    # Shutdown scheduler and sensors
+    await shutdown_scheduler()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -28,8 +29,8 @@ app = FastAPI(lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_credentials=False,
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
@@ -42,22 +43,43 @@ def health_check():
     return {"status": "ok", "message": "WeatherBox service is running."}
 
 
-# @app.get("/mjpeg")
-# async def mjpeg():
-#     return StreamingResponse(
-#         generate_frames(), media_type="multipart/x-mixed-replace; boundary=frame"
-#     )
+@app.get("/sensors/status")
+def get_sensor_status():
+    """
+    Get the status of all sensors including initialization state.
+    """
+    return {
+        "initialization_complete": sensor_manager.is_initialization_complete(),
+        "sensors": sensor_manager.get_sensor_status(),
+    }
+
+
+@app.get("/mjpeg")
+async def mjpeg():
+    return StreamingResponse(
+        generate_frames(), media_type="multipart/x-mixed-replace; boundary=frame"
+    )
 
 
 @app.get("/data")
 def get_data():
     session = get_session()
     data = {
-        "ltr390": session.exec(select(LTR390).limit(1000)).all(),
-        "as7341": session.exec(select(AS7341).limit(1000)).all(),
-        "bme688": session.exec(select(BME688).limit(1000)).all(),
-        "ens160": session.exec(select(ENS160).limit(1000)).all(),
-        "sps30": session.exec(select(SPS30).limit(1000)).all(),
+        "ltr390": session.exec(
+            select(LTR390).order_by(col(LTR390.timestamp).desc()).limit(1000)
+        ).all(),
+        "as7341": session.exec(
+            select(AS7341).order_by(col(AS7341.timestamp).desc()).limit(1000)
+        ).all(),
+        "bme688": session.exec(
+            select(BME688).order_by(col(BME688.timestamp).desc()).limit(1000)
+        ).all(),
+        "ens160": session.exec(
+            select(ENS160).order_by(col(ENS160.timestamp).desc()).limit(1000)
+        ).all(),
+        "sps30": session.exec(
+            select(SPS30).order_by(col(SPS30.timestamp).desc()).limit(1000)
+        ).all(),
     }
     return data
 
