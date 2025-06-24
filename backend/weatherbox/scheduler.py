@@ -6,12 +6,12 @@ from weatherbox.sensor_manager import sensor_manager
 from weatherbox.timelapse import capture
 
 INTERVALS = {
-    "AS7341": 30,  # AS7341 sampling interval in seconds
-    "BME688": 30,  # BME688 sampling interval in seconds
-    "ENS160": 30,  # ENS160 sampling interval in seconds
-    "LTR390": 30,  # LTR390 sampling interval in seconds
-    "SPS30": 30,  # SPS30 sampling interval in seconds
-    "Timelapse": 60,  # Timelapse capture interval in seconds
+    "AS7341": 30,
+    "BME688": 30,
+    "ENS160": 30,
+    "LTR390": 30,
+    "SPS30": 30,
+    "Timelapse": 60,
 }
 
 scheduler = AsyncIOScheduler(
@@ -21,6 +21,14 @@ scheduler = AsyncIOScheduler(
         "misfire_grace_time": 15,  # 15 seconds grace time for misfired jobs
     }
 )
+
+
+def get_interval(sensor_name: str) -> int:
+    """
+    Get the sampling interval for a given sensor.
+    If the sensor is not found, return a default interval of 30 seconds.
+    """
+    return INTERVALS.get(sensor_name, 30)
 
 
 async def initialize_and_start_scheduler():
@@ -36,28 +44,27 @@ async def initialize_and_start_scheduler():
         if not sensor.is_ready():
             continue
 
+        interval = get_interval(sensor.name)
+
         scheduler.add_job(
             sensor.read_and_store,
             "interval",
-            seconds=INTERVALS.get(sensor.name, 30),
+            seconds=interval,
             id=sensor.name,
             name=sensor.name,
         )
-        logging.info(
-            f"{sensor.name} scheduled with interval {INTERVALS[sensor.name]} seconds."
-        )
+        logging.info(f"{sensor.name} scheduled with interval {interval} seconds.")
 
     if not os.getenv("TIMELAPSE_DISABLED", "false").lower() == "true":
+        interval = get_interval("Timelapse")
         scheduler.add_job(
             capture,
             "interval",
-            seconds=INTERVALS["Timelapse"],
+            seconds=interval,
             id="Timelapse",
             name="Timelapse Capture",
         )
-        logging.info(
-            f"Timelapse capture scheduled with interval {INTERVALS['Timelapse']} seconds."
-        )
+        logging.info(f"Timelapse capture scheduled with interval {interval} seconds.")
 
 
 async def shutdown_scheduler():

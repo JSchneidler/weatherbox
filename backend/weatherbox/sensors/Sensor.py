@@ -29,7 +29,7 @@ class Sensor(ABC):
     async def initialize(self) -> bool:
         """
         Initialize the sensor.
-        This method should be overridden by subclasses to perform specific initialization tasks.
+        This method should be overridden and then called by subclasses to perform generic and specific initialization tasks.
         Returns True if initialization is successful, False otherwise.
         """
         self.status = SensorStatus.READY
@@ -38,7 +38,7 @@ class Sensor(ABC):
     async def deinitialize(self) -> bool:
         """
         Deinitialize the sensor.
-        This method should be overridden by subclasses to perform specific deinitialization tasks.
+        This method should be overridden and then called by subclasses to perform generic and specific deinitialization tasks.
         Returns True if deinitialization is successful, False otherwise.
         """
         self.status = SensorStatus.OFF
@@ -50,6 +50,16 @@ class Sensor(ABC):
         Returns True if the sensor status is READY, False otherwise.
         """
         return self.status == SensorStatus.READY
+
+    def get_settings(self) -> dict:
+        """
+        Get the settings of the sensor.
+        This method should be overridden and then called by subclasses to return generic and specific sensor settings.
+        Returns a dictionary containing sensor settings.
+        """
+        return {
+            "disabled": self.status == SensorStatus.DISABLED,
+        }
 
     @abstractmethod
     async def read(self) -> object:
@@ -80,10 +90,14 @@ class I2CSensor(Sensor):
         self.i2c_bus = i2c_bus
         self.i2c_address = i2c_address
 
-    async def initialize(self) -> bool:
+    def get_settings(self) -> dict:
         """
-        Initialize the I2C sensor.
-        This method should be overridden by subclasses to perform specific I2C initialization tasks.
-        Returns True if initialization is successful, False otherwise.
+        Get the settings of the sensor.
+        This method should be overridden and then called by subclasses to return generic and specific sensor settings.
+        Returns a dictionary containing sensor settings.
         """
-        return await super().initialize()
+        return {
+            **super().get_settings(),
+            "i2c_bus": self.i2c_bus,
+            "i2c_address": self.i2c_address,
+        }

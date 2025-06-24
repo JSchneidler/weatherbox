@@ -19,7 +19,7 @@ interface SystemStats {
 
 export function useSensorData({ startDate, endDate }: UseDataParams) {
   // Build URL with query parameters
-  let url = `http://${window.location.hostname}:8000/data/sensors`;
+  let url = `http://${window.location.hostname}:8000/sensors/data`;
   const params = new URLSearchParams();
 
   if (startDate) {

@@ -6,6 +6,8 @@ from pydantic import BaseModel
 from weatherbox.db import get_session
 from weatherbox.models import AS7341, BME688, ENS160, LTR390, SPS30
 from weatherbox.sensor_manager import sensor_manager
+from weatherbox.sensors.Sensor import Sensor, SensorStatus
+from weatherbox.scheduler import get_interval
 
 router = APIRouter()
 
@@ -68,7 +70,18 @@ def _query_sensor_data(model_class, session, start_dt, end_dt, limit=1000):
     return result.all()
 
 
-@router.get("", response_model=SensorData)
+@router.get("")
+def get_sensor_status():
+    """
+    Get the status of all sensors including initialization state.
+    """
+    return {
+        "initialization_complete": sensor_manager.is_initialization_complete(),
+        "sensors": sensor_manager.get_sensor_status(),
+    }
+
+
+@router.get("/data", response_model=SensorData)
 def get_sensor_data(
     start_date: Optional[str] = Query(
         None, description="Start date in ISO format (e.g., 2024-01-01T00:00:00Z)"
@@ -92,12 +105,17 @@ def get_sensor_data(
     )
 
 
-@router.get("/status")
-def get_sensor_status():
+@router.get("/settings")
+def get_sensor_settings():
     """
-    Get the status of all sensors including initialization state.
+    Get the current settings for all sensors.
     """
+
+    return {sensor.name: getSettings(sensor) for sensor in sensor_manager.sensors}
+
+
+def getSettings(sensor: Sensor):
     return {
-        "initialization_complete": sensor_manager.is_initialization_complete(),
-        "sensors": sensor_manager.get_sensor_status(),
+        **sensor.get_settings(),
+        "sample_interval": get_interval(sensor.name),
     }

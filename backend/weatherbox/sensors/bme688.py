@@ -9,6 +9,7 @@ from weatherbox.sensors.i2c_manager import get_i2c_bus, i2c_manager
 from weatherbox.sensors.Sensor import I2CSensor
 
 DEFAULT_I2C_ADDRESS = 0x77
+SEA_LEVEL_PRESSURE = 833.32
 
 
 class BME688Data(NamedTuple):
@@ -34,10 +35,21 @@ class BME688(I2CSensor):
             self.bme680 = adafruit_bme680.Adafruit_BME680_I2C(
                 get_i2c_bus(self.i2c_bus), self.i2c_address
             )
-            self.bme680.sea_level_pressure = 833.32
+            self.bme680.sea_level_pressure = SEA_LEVEL_PRESSURE
 
         logging.info("BME688 initialized")
         return await super().initialize()
+
+    def get_settings(self) -> dict:
+        """
+        Get the settings of the BME688 sensor.
+        This method overrides the base class method to include specific settings for BME688.
+        Returns a dictionary containing sensor settings.
+        """
+        return {
+            **super().get_settings(),
+            "sea_level_pressure": SEA_LEVEL_PRESSURE,
+        }
 
     async def read(self) -> BME688Data:
         async with i2c_manager.acquire_bus(self.i2c_bus):
