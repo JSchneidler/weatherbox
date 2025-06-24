@@ -4,16 +4,11 @@ from typing import NamedTuple
 import adafruit_bme680
 
 from weatherbox.db import get_session, utc_timestamp
-from weatherbox.models import BME688
+from weatherbox.models import BME688 as BME688Model
 from weatherbox.sensors.i2c_manager import get_i2c_bus, i2c_manager
+from weatherbox.sensors.Sensor import I2CSensor
 
-I2C_ADDRESS = 0x77
-I2C_BUS = 1
-
-bme680 = adafruit_bme680.Adafruit_BME680_I2C(get_i2c_bus(I2C_BUS), I2C_ADDRESS)
-
-# For Denver, CO
-bme680.sea_level_pressure = 833.32
+DEFAULT_I2C_ADDRESS = 0x77
 
 
 class BME688Data(NamedTuple):
@@ -24,44 +19,49 @@ class BME688Data(NamedTuple):
     altitude: float
 
 
-async def read() -> BME688Data:
-    async with i2c_manager.acquire_bus(I2C_BUS):
-        return BME688Data(
-            temperature=bme680.temperature,
-            humidity=bme680.relative_humidity,
-            pressure=bme680.pressure,
-            gas=bme680.gas,
-            altitude=bme680.altitude,
+class BME688(I2CSensor):
+    bme680: adafruit_bme680.Adafruit_BME680_I2C
+
+    def __init__(self, i2c_bus: int, i2c_address: int = DEFAULT_I2C_ADDRESS):
+        super().__init__(
+            name="BME688",
+            i2c_address=i2c_address,
+            i2c_bus=i2c_bus,
         )
 
+    async def initialize(self) -> bool:
+        async with i2c_manager.acquire_bus(self.i2c_bus):
+            self.bme680 = adafruit_bme680.Adafruit_BME680_I2C(
+                get_i2c_bus(self.i2c_bus), self.i2c_address
+            )
+            self.bme680.sea_level_pressure = 833.32
 
-async def read_and_store():
-    data = await read()
+        logging.info("BME688 initialized")
+        return await super().initialize()
 
-    bme688_data = BME688(
-        timestamp=utc_timestamp(),
-        temperature=data.temperature,
-        humidity=data.humidity,
-        pressure=data.pressure,
-        gas=data.gas,
-        altitude=data.altitude,
-    )
-    session = get_session()
-    session.add(bme688_data)
-    session.commit()
+    async def read(self) -> BME688Data:
+        async with i2c_manager.acquire_bus(self.i2c_bus):
+            return BME688Data(
+                temperature=self.bme680.temperature,
+                humidity=self.bme680.relative_humidity,
+                pressure=self.bme680.pressure,
+                gas=self.bme680.gas,
+                altitude=self.bme680.altitude,
+            )
 
-    logging.info("Sampled BME688")
+    async def read_and_store(self):
+        data = await self.read()
 
+        bme688_data = BME688Model(
+            timestamp=utc_timestamp(),
+            temperature=data.temperature,
+            humidity=data.humidity,
+            pressure=data.pressure,
+            gas=data.gas,
+            altitude=data.altitude,
+        )
+        session = get_session()
+        session.add(bme688_data)
+        session.commit()
 
-# async def read() -> BME688Data:
-#     return BME688Data(
-#         temperature=round(bme680.temperature, 2),
-#         humidity=round(bme680.relative_humidity, 2),
-#         pressure=round(bme680.pressure, 2),
-#         gas=bme680.gas,
-#     )
-
-
-# async def read_and_store():
-#     async with i2c_manager.acquire_bus(I2C_BUS):
-#         pass
+        logging.info("Sampled BME688")

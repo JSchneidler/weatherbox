@@ -4,13 +4,12 @@ from typing import NamedTuple
 import adafruit_ltr390
 
 from weatherbox.db import get_session, utc_timestamp
-from weatherbox.models import LTR390
+from weatherbox.models import LTR390 as LTR390Model
 from weatherbox.sensors.i2c_manager import get_i2c_bus, i2c_manager
+from weatherbox.sensors.Sensor import I2CSensor
 
-I2C_ADDRESS = 0x53
-I2C_BUS = 0
 
-ltr390 = adafruit_ltr390.LTR390(get_i2c_bus(I2C_BUS), I2C_ADDRESS)
+DEFAULT_I2C_ADDRESS = 0x53
 
 
 class LTR390Data(NamedTuple):
@@ -18,26 +17,39 @@ class LTR390Data(NamedTuple):
     uvs: int
 
 
-async def read() -> LTR390Data:
-    async with i2c_manager.acquire_bus(I2C_BUS):
-        return LTR390Data(light=ltr390.light, uvs=ltr390.uvs)
+class LTR390(I2CSensor):
+    ltr390: adafruit_ltr390.LTR390
 
+    def __init__(self, i2c_bus: int, i2c_address: int = DEFAULT_I2C_ADDRESS):
+        super().__init__(
+            name="LTR390",
+            i2c_address=i2c_address,
+            i2c_bus=i2c_bus,
+        )
 
-async def read_and_store():
-    data = await read()
+    async def initialize(self) -> bool:
+        async with i2c_manager.acquire_bus(self.i2c_bus):
+            self.ltr390 = adafruit_ltr390.LTR390(
+                get_i2c_bus(self.i2c_bus), self.i2c_address
+            )
 
-    ltr390_data = LTR390(
-        timestamp=utc_timestamp(),
-        light=data.light,
-        uvs=data.uvs,
-    )
-    session = get_session()
-    session.add(ltr390_data)
-    session.commit()
+        logging.info("LTR390 initialized")
+        return await super().initialize()
 
-    logging.info("Sampled LTR390")
+    async def read(self) -> LTR390Data:
+        async with i2c_manager.acquire_bus(self.i2c_bus):
+            return LTR390Data(light=self.ltr390.light, uvs=self.ltr390.uvs)
 
+    async def read_and_store(self):
+        data = await self.read()
 
-# async def read_and_store():
-#     async with i2c_manager.acquire_bus(I2C_BUS):
-#         pass
+        ltr390_data = LTR390Model(
+            timestamp=utc_timestamp(),
+            light=data.light,
+            uvs=data.uvs,
+        )
+        session = get_session()
+        session.add(ltr390_data)
+        session.commit()
+
+        logging.info("Sampled LTR390")

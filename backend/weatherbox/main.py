@@ -9,7 +9,7 @@ import uvicorn
 from weatherbox.scheduler import initialize_and_start_scheduler, shutdown_scheduler
 from weatherbox.sensor_manager import sensor_manager
 
-from weatherbox.camera.stream import generate_frames
+# from weatherbox.camera.stream import generate_frames
 from weatherbox.routes import router as data_router
 
 
@@ -70,11 +70,11 @@ def get_system_stats():
     }
 
 
-@app.get("/mjpeg")
-async def mjpeg():
-    return StreamingResponse(
-        generate_frames(), media_type="multipart/x-mixed-replace; boundary=frame"
-    )
+# @app.get("/mjpeg")
+# async def mjpeg():
+#     return StreamingResponse(
+#         generate_frames(), media_type="multipart/x-mixed-replace; boundary=frame"
+#     )
 
 
 def start_server():

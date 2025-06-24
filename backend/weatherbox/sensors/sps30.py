@@ -7,9 +7,9 @@ from typing import Dict, NamedTuple
 from weatherbox.db import get_session, utc_timestamp
 from weatherbox.models import SPS30 as SPS30Model
 from weatherbox.sensors.i2c import I2C
+from weatherbox.sensors.Sensor import I2CSensor, SensorStatus
 
-I2C_ADDRESS = 0x69
-I2C_BUS = 1
+DEFAULT_I2C_ADDRESS = 0x69
 
 # https://github.com/dvsu/sps30/blob/b732f2af929ab7a824b3c95f84c2b499a08bac7d/sps30.py
 # I2C commands
@@ -52,27 +52,114 @@ class SPS30Data(NamedTuple):
     particle_size: float
 
 
-class SPS30:
+class SPS30(I2CSensor):
+    sampling_period: int
+    i2c: I2C
+    task: asyncio.Task
+    __data: Queue
+    __valid: Dict[str, bool]
 
     def __init__(
         self,
-        bus: int = I2C_BUS,
-        address: int = I2C_ADDRESS,
+        i2c_bus: int,
+        i2c_address: int = DEFAULT_I2C_ADDRESS,
         sampling_period: int = 1,
-        logger: str = None,
     ):
-        self.logger = None
-        if logger:
-            self.logger = logging.getLogger(logger)
-
+        super().__init__("SPS30", i2c_bus, i2c_address)
         self.sampling_period = sampling_period
-        self.i2c = I2C(bus, address)
+        self.i2c = I2C(self.i2c_bus, self.i2c_address)
         self.__data = Queue(maxsize=20)
         self.__valid = {
             "mass_density": False,
             "particle_count": False,
             "particle_size": False,
         }
+
+    async def initialize(self) -> bool:
+        """Initialize SPS30 sensor with proper startup sequence."""
+        try:
+            # Verify sensor is accessible
+            firmware_version = await self.firmware_version()
+            product_type = await self.product_type()
+            status = await self.read_status_register()
+
+            logging.info(f"SPS30 firmware: {firmware_version}, product: {product_type}")
+            logging.info(f"SPS30 status: {status}")
+
+            # Start measurement mode
+            await self.start_measurement()
+
+            # Wait for first data to be ready
+            max_wait_time = 60  # 60 seconds max wait
+            wait_time = 0
+            while not await self.read_data_ready_flag():
+                await asyncio.sleep(1)
+                wait_time += 1
+                if wait_time >= max_wait_time:
+                    raise TimeoutError("SPS30 data not ready within timeout period")
+
+            logging.info("SPS30 measurement started successfully")
+
+        except Exception as e:
+            logging.error(f"SPS30 initialization failed: {e}")
+            self.status = SensorStatus.ERROR
+            return False
+
+        return await super().initialize()
+
+    async def deinitialize(self) -> bool:
+        """Deinitialize SPS30 sensor."""
+        try:
+            await self.stop_measurement()
+        except Exception as e:
+            logging.error(f"SPS30 deinitialization failed: {e}")
+            self.status = SensorStatus.ERROR
+            return False
+
+        return await super().deinitialize()
+
+    async def read(self) -> SPS30Data:
+        await self.start_measurement()
+
+        while not await self.read_data_ready_flag():
+            await asyncio.sleep(0.1)
+
+        data = await self.get_measurement()
+        await self.stop_measurement()
+
+        return SPS30Data(
+            mass_density=data["sensor_data"]["mass_density"],
+            particle_count=data["sensor_data"]["particle_count"],
+            particle_size=data["sensor_data"]["particle_size"],
+        )
+
+    async def read_and_store(self):
+        if not await self.read_data_ready_flag():
+            return  # No data ready, skip this reading
+
+        data = await self.get_measurement()
+
+        if not data:  # Empty data, skip this reading
+            return
+
+        sps30_data = SPS30Model(
+            timestamp=utc_timestamp(),
+            pm10=data["sensor_data"]["mass_density"]["pm1.0"],
+            pm25=data["sensor_data"]["mass_density"]["pm2.5"],
+            pm40=data["sensor_data"]["mass_density"]["pm4.0"],
+            pm100=data["sensor_data"]["mass_density"]["pm10"],
+            nc05=data["sensor_data"]["particle_count"]["pm0.5"],
+            nc10=data["sensor_data"]["particle_count"]["pm1.0"],
+            nc25=data["sensor_data"]["particle_count"]["pm2.5"],
+            nc40=data["sensor_data"]["particle_count"]["pm4.0"],
+            nc100=data["sensor_data"]["particle_count"]["pm10"],
+            typical_particle_size=data["sensor_data"]["particle_size"],
+        )
+        session = get_session()
+        session.add(sps30_data)
+        session.commit()
+
+        logging.info("Sampled SPS30")
 
     def crc_calc(self, data: list) -> int:
         crc = 0xFF
@@ -89,8 +176,8 @@ class SPS30:
         return crc & 0x0000FF
 
     async def firmware_version(self) -> str:
-        await self.write(CMD_FIRMWARE_VERSION)
-        data = await self.read(NBYTES_FIRMWARE_VERSION)
+        await self._write(CMD_FIRMWARE_VERSION)
+        data = await self._read(NBYTES_FIRMWARE_VERSION)
 
         if self.crc_calc(data[:2]) != data[2]:
             return "CRC mismatched"
@@ -98,8 +185,8 @@ class SPS30:
         return ".".join(map(str, data[:2]))
 
     async def product_type(self) -> str:
-        await self.write(CMD_PRODUCT_TYPE)
-        data = await self.read(NBYTES_PRODUCT_TYPE)
+        await self._write(CMD_PRODUCT_TYPE)
+        data = await self._read(NBYTES_PRODUCT_TYPE)
         result = ""
 
         for i in range(0, NBYTES_PRODUCT_TYPE, 3):
@@ -111,8 +198,8 @@ class SPS30:
         return result
 
     async def serial_number(self) -> str:
-        await self.write(CMD_SERIAL_NUMBER)
-        data = await self.read(NBYTES_SERIAL_NUMBER)
+        await self._write(CMD_SERIAL_NUMBER)
+        data = await self._read(NBYTES_SERIAL_NUMBER)
         result = ""
 
         for i in range(0, NBYTES_SERIAL_NUMBER, PACKET_SIZE):
@@ -124,8 +211,8 @@ class SPS30:
         return result
 
     async def read_status_register(self) -> dict:
-        await self.write(CMD_READ_STATUS_REGISTER)
-        data = await self.read(NBYTES_READ_STATUS_REGISTER)
+        await self._write(CMD_READ_STATUS_REGISTER)
+        data = await self._read(NBYTES_READ_STATUS_REGISTER)
 
         status = []
         for i in range(0, NBYTES_READ_STATUS_REGISTER, PACKET_SIZE):
@@ -151,24 +238,16 @@ class SPS30:
         await self.i2c.write(CMD_CLEAR_STATUS_REGISTER)
 
     async def read_data_ready_flag(self) -> bool:
-        await self.write(CMD_READ_DATA_READY_FLAG)
-        data = await self.read(NBYTES_READ_DATA_READY_FLAG)
+        await self._write(CMD_READ_DATA_READY_FLAG)
+        data = await self._read(NBYTES_READ_DATA_READY_FLAG)
 
         if self.crc_calc(data[:2]) != data[2]:
-            if self.logger:
-                self.logger.warning(
-                    "'read_data_ready_flag' CRC mismatched!"
-                    + f"  Data: {data[:2]}"
-                    + f"  Calculated CRC: {self.crc_calc(data[:2])}"
-                    + f"  Expected: {data[2]}"
-                )
-            else:
-                print(
-                    "'read_data_ready_flag' CRC mismatched!"
-                    + f"  Data: {data[:2]}"
-                    + f"  Calculated CRC: {self.crc_calc(data[:2])}"
-                    + f"  Expected: {data[2]}"
-                )
+            logging.warning(
+                "'read_data_ready_flag' CRC mismatched!"
+                + f"  Data: {data[:2]}"
+                + f"  Calculated CRC: {self.crc_calc(data[:2])}"
+                + f"  Expected: {data[2]}"
+            )
 
             return False
 
@@ -184,8 +263,8 @@ class SPS30:
         await self.i2c.write(CMD_START_FAN_CLEANING)
 
     async def read_auto_cleaning_interval(self) -> int:
-        await self.write(CMD_AUTO_CLEANING_INTERVAL)
-        data = await self.read(NBYTES_AUTO_CLEANING_INTERVAL)
+        await self._write(CMD_AUTO_CLEANING_INTERVAL)
+        data = await self._read(NBYTES_AUTO_CLEANING_INTERVAL)
 
         interval = []
         for i in range(0, NBYTES_AUTO_CLEANING_INTERVAL, 3):
@@ -250,20 +329,12 @@ class SPS30:
             for i in range(0, SIZE_FLOAT, PACKET_SIZE):
                 offset = (block * SIZE_FLOAT) + i
                 if self.crc_calc(data[offset : offset + 2]) != data[offset + 2]:
-                    if self.logger:
-                        self.logger.warning(
-                            "'__mass_density_measurement' CRC mismatched!"
-                            + f"  Data: {data[offset:offset+2]}"
-                            + f"  Calculated CRC: {self.crc_calc(data[offset:offset+2])}"
-                            + f"  Expected: {data[offset+2]}"
-                        )
-                    else:
-                        print(
-                            "'__mass_density_measurement' CRC mismatched!"
-                            + f"  Data: {data[offset:offset+2]}"
-                            + f"  Calculated CRC: {self.crc_calc(data[offset:offset+2])}"
-                            + f"  Expected: {data[offset+2]}"
-                        )
+                    logging.warning(
+                        "'__mass_density_measurement' CRC mismatched!"
+                        + f"  Data: {data[offset:offset+2]}"
+                        + f"  Calculated CRC: {self.crc_calc(data[offset:offset+2])}"
+                        + f"  Expected: {data[offset+2]}"
+                    )
                     self.__valid["mass_density"] = False
                     return {}
 
@@ -287,20 +358,12 @@ class SPS30:
             for i in range(0, SIZE_FLOAT, PACKET_SIZE):
                 offset = (block * SIZE_FLOAT) + i
                 if self.crc_calc(data[offset : offset + 2]) != data[offset + 2]:
-                    if self.logger:
-                        self.logger.warning(
-                            "'__particle_count_measurement' CRC mismatched!"
-                            + f"  Data: {data[offset:offset+2]}"
-                            + f"  Calculated CRC: {self.crc_calc(data[offset:offset+2])}"
-                            + f"  Expected: {data[offset+2]}"
-                        )
-                    else:
-                        print(
-                            "'__particle_count_measurement' CRC mismatched!"
-                            + f"  Data: {data[offset:offset+2]}"
-                            + f"  Calculated CRC: {self.crc_calc(data[offset:offset+2])}"
-                            + f"  Expected: {data[offset+2]}"
-                        )
+                    logging.warning(
+                        "'__particle_count_measurement' CRC mismatched!"
+                        + f"  Data: {data[offset:offset+2]}"
+                        + f"  Calculated CRC: {self.crc_calc(data[offset:offset+2])}"
+                        + f"  Expected: {data[offset+2]}"
+                    )
 
                     self.__valid["particle_count"] = False
                     return {}
@@ -319,20 +382,12 @@ class SPS30:
         size = []
         for i in range(0, SIZE_FLOAT, PACKET_SIZE):
             if self.crc_calc(data[i : i + 2]) != data[i + 2]:
-                if self.logger:
-                    self.logger.warning(
-                        "'__particle_size_measurement' CRC mismatched!"
-                        + f"  Data: {data[i:i+2]}"
-                        + f"  Calculated CRC: {self.crc_calc(data[i:i+2])}"
-                        + f"  Expected: {data[i+2]}"
-                    )
-                else:
-                    print(
-                        "'__particle_size_measurement' CRC mismatched!"
-                        + f"  Data: {data[i:i+2]}"
-                        + f"  Calculated CRC: {self.crc_calc(data[i:i+2])}"
-                        + f"  Expected: {data[i+2]}"
-                    )
+                logging.warning(
+                    "'__particle_size_measurement' CRC mismatched!"
+                    + f"  Data: {data[i:i+2]}"
+                    + f"  Calculated CRC: {self.crc_calc(data[i:i+2])}"
+                    + f"  Expected: {data[i+2]}"
+                )
 
                 self.__valid["particle_size"] = False
                 return 0.0
@@ -351,8 +406,8 @@ class SPS30:
                 if not await self.read_data_ready_flag():
                     continue
 
-                await self.write(CMD_READ_MEASURED_VALUES)
-                data = await self.read(NBYTES_MEASURED_VALUES_FLOAT)
+                await self._write(CMD_READ_MEASURED_VALUES)
+                data = await self._read(NBYTES_MEASURED_VALUES_FLOAT)
 
                 if self.__data.full():
                     self.__data.get()
@@ -374,19 +429,13 @@ class SPS30:
                 self.__data.put(result if all(self.__valid.values()) else {})
 
             except KeyboardInterrupt:
-                if self.logger:
-                    self.logger.warning("Stopping measurement...")
-                else:
-                    print("Stopping measurement...")
+                logging.warning("Stopping measurement...")
 
                 await self.stop_measurement()
                 sys.exit()
 
             except Exception as e:
-                if self.logger:
-                    self.logger.warning(f"{type(e).__name__}: {e}")
-                else:
-                    print(f"{type(e).__name__}: {e}")
+                logging.warning(f"{type(e).__name__}: {e}")
 
             finally:
                 await asyncio.sleep(self.sampling_period)
@@ -401,18 +450,18 @@ class SPS30:
         await asyncio.sleep(0.05)
         self.__run()
 
-    async def read(self, nbytes: int) -> list:
+    async def _read(self, nbytes: int) -> list:
         return await self.i2c.read(nbytes)
 
-    async def write(self, data: list) -> None:
+    async def _write(self, data: list) -> None:
         await self.i2c.write(data)
 
     async def get_measurement(self) -> dict:
         if not await self.read_data_ready_flag():
             return {}
 
-        await self.write(CMD_READ_MEASURED_VALUES)
-        data = await self.read(NBYTES_MEASURED_VALUES_FLOAT)
+        await self._write(CMD_READ_MEASURED_VALUES)
+        data = await self._read(NBYTES_MEASURED_VALUES_FLOAT)
 
         result = {
             "sensor_data": {
@@ -430,57 +479,8 @@ class SPS30:
 
     async def stop_measurement(self) -> None:
         await self.i2c.write(CMD_STOP_MEASUREMENT)
+        self.task.cancel()
         # self.i2c.close()
 
     def __run(self) -> None:
-        asyncio.create_task(self.__read_measured_value())
-
-
-async def read() -> SPS30Data:
-    sensor = SPS30()
-    await sensor.start_measurement()
-
-    while not await sensor.read_data_ready_flag():
-        await asyncio.sleep(0.1)
-
-    data = await sensor.get_measurement()
-    await sensor.stop_measurement()
-
-    return SPS30Data(
-        mass_density=data["sensor_data"]["mass_density"],
-        particle_count=data["sensor_data"]["particle_count"],
-        particle_size=data["sensor_data"]["particle_size"],
-    )
-
-
-async def read_and_store_with_instance(sps30_instance: SPS30):
-    """
-    Read and store SPS30 data using an existing SPS30 instance.
-    This is more efficient than creating a new instance each time.
-    """
-    if not await sps30_instance.read_data_ready_flag():
-        return  # No data ready, skip this reading
-
-    data = await sps30_instance.get_measurement()
-
-    if not data:  # Empty data, skip this reading
-        return
-
-    sps30_data = SPS30Model(
-        timestamp=utc_timestamp(),
-        pm10=data["sensor_data"]["mass_density"]["pm1.0"],
-        pm25=data["sensor_data"]["mass_density"]["pm2.5"],
-        pm40=data["sensor_data"]["mass_density"]["pm4.0"],
-        pm100=data["sensor_data"]["mass_density"]["pm10"],
-        nc05=data["sensor_data"]["particle_count"]["pm0.5"],
-        nc10=data["sensor_data"]["particle_count"]["pm1.0"],
-        nc25=data["sensor_data"]["particle_count"]["pm2.5"],
-        nc40=data["sensor_data"]["particle_count"]["pm4.0"],
-        nc100=data["sensor_data"]["particle_count"]["pm10"],
-        typical_particle_size=data["sensor_data"]["particle_size"],
-    )
-    session = get_session()
-    session.add(sps30_data)
-    session.commit()
-
-    logging.info("Sampled SPS30")
+        self.task = asyncio.create_task(self.__read_measured_value())
