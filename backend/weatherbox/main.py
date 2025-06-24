@@ -7,10 +7,10 @@ import psutil
 import uvicorn
 
 from weatherbox.scheduler import initialize_and_start_scheduler, shutdown_scheduler
-from weatherbox.sensor_manager import sensor_manager
 
 # from weatherbox.camera.stream import generate_frames
-from weatherbox.routes import router as data_router
+from weatherbox.routes.sensors import router as sensors
+from weatherbox.routes.images import router as images
 
 
 @asynccontextmanager
@@ -33,7 +33,8 @@ app.add_middleware(
 )
 
 # Include the data routes
-app.include_router(data_router, prefix="/data", tags=["sensor data"])
+app.include_router(sensors, prefix="/sensors", tags=["sensor data"])
+app.include_router(images, prefix="/images", tags=["image data"])
 
 
 @app.get("/health")
@@ -42,17 +43,6 @@ def health_check():
     Health check endpoint to verify that the service is running.
     """
     return {"status": "ok", "message": "WeatherBox service is running."}
-
-
-@app.get("/sensors/status")
-def get_sensor_status():
-    """
-    Get the status of all sensors including initialization state.
-    """
-    return {
-        "initialization_complete": sensor_manager.is_initialization_complete(),
-        "sensors": sensor_manager.get_sensor_status(),
-    }
 
 
 @app.get("/system/stats")

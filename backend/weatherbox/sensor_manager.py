@@ -13,7 +13,7 @@ I2C_BUS_1 = 1
 class SensorManager:
     def __init__(self):
         self.sensors: List[Sensor] = [
-            AS7341(I2C_BUS_0, 0x12),
+            AS7341(I2C_BUS_0),
             BME688(I2C_BUS_1),
             ENS160(I2C_BUS_1),
             LTR390(I2C_BUS_0),
