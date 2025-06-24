@@ -1,9 +1,9 @@
-from datetime import datetime
+import logging
 from typing import NamedTuple
 
 import adafruit_bme680
 
-from weatherbox.db import get_session
+from weatherbox.db import get_session, utc_timestamp
 from weatherbox.models import BME688
 from weatherbox.sensors.i2c_manager import get_i2c_bus, i2c_manager
 
@@ -39,7 +39,7 @@ async def read_and_store():
     data = await read()
 
     bme688_data = BME688(
-        timestamp=datetime.now().isoformat(),
+        timestamp=utc_timestamp(),
         temperature=data.temperature,
         humidity=data.humidity,
         pressure=data.pressure,
@@ -49,6 +49,8 @@ async def read_and_store():
     session = get_session()
     session.add(bme688_data)
     session.commit()
+
+    logging.info("Sampled BME688")
 
 
 # async def read() -> BME688Data:

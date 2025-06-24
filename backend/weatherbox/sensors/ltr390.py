@@ -1,9 +1,9 @@
-from datetime import datetime
+import logging
 from typing import NamedTuple
 
 import adafruit_ltr390
 
-from weatherbox.db import get_session
+from weatherbox.db import get_session, utc_timestamp
 from weatherbox.models import LTR390
 from weatherbox.sensors.i2c_manager import get_i2c_bus, i2c_manager
 
@@ -27,13 +27,15 @@ async def read_and_store():
     data = await read()
 
     ltr390_data = LTR390(
-        timestamp=datetime.now().isoformat(),
+        timestamp=utc_timestamp(),
         light=data.light,
         uvs=data.uvs,
     )
     session = get_session()
     session.add(ltr390_data)
     session.commit()
+
+    logging.info("Sampled LTR390")
 
 
 # async def read_and_store():

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from os import getenv
 
 from sqlmodel import Session, SQLModel, create_engine
@@ -15,5 +15,5 @@ def get_session():
     return Session(engine)
 
 
-def db_now():
-    return datetime.now().isoformat()
+def utc_timestamp():
+    return datetime.now(timezone.utc).isoformat()

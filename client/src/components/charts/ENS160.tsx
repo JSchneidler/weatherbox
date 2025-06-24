@@ -25,15 +25,12 @@ const ENS160 = ({
   isLoading: boolean;
   error: Error | null;
 }) => {
-  const processedEns160Data = ens160Data
-    .slice()
-    .reverse()
-    .map((item: Ens160Item) => ({
-      date: formatTimestamp(item.timestamp),
-      aqi: item.aqi,
-      tvoc: item.tvoc,
-      eco2: item.eco2,
-    }));
+  const processedEns160Data = ens160Data.map((item: Ens160Item) => ({
+    date: formatTimestamp(item.timestamp),
+    aqi: item.aqi,
+    tvoc: item.tvoc,
+    eco2: item.eco2,
+  }));
 
   return (
     <Paper p="md" withBorder>

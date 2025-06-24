@@ -1,9 +1,9 @@
-from datetime import datetime
+import logging
 from typing import NamedTuple
 
 import adafruit_ens160
 
-from weatherbox.db import get_session
+from weatherbox.db import get_session, utc_timestamp
 from weatherbox.models import ENS160
 from weatherbox.sensors.i2c_manager import get_i2c_bus, i2c_manager
 
@@ -33,7 +33,7 @@ async def read_and_store():
     data = await read()
 
     ens160_data = ENS160(
-        timestamp=datetime.now().isoformat(),
+        timestamp=utc_timestamp(),
         aqi=data.aqi,
         tvoc=data.tvoc,
         eco2=data.eco2,
@@ -41,3 +41,5 @@ async def read_and_store():
     session = get_session()
     session.add(ens160_data)
     session.commit()
+
+    logging.info("Sampled ENS160")

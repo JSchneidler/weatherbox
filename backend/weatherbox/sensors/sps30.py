@@ -1,12 +1,10 @@
-import sys
-import threading
-import logging
-from queue import Queue
-from datetime import datetime
-from typing import Dict, NamedTuple
 import asyncio
+import logging
+import sys
+from queue import Queue
+from typing import Dict, NamedTuple
 
-from weatherbox.db import get_session
+from weatherbox.db import get_session, utc_timestamp
 from weatherbox.models import SPS30 as SPS30Model
 from weatherbox.sensors.i2c import I2C
 
@@ -370,7 +368,7 @@ class SPS30:
                         "particle_count_unit": "#/cm3",
                         "particle_size_unit": "um",
                     },
-                    "timestamp": int(datetime.now().timestamp()),
+                    "timestamp": utc_timestamp(),
                 }
 
                 self.__data.put(result if all(self.__valid.values()) else {})
@@ -425,7 +423,7 @@ class SPS30:
                 "particle_count_unit": "#/cm3",
                 "particle_size_unit": "um",
             },
-            "timestamp": int(datetime.now().timestamp()),
+            "timestamp": utc_timestamp(),
         }
 
         return result if all(self.__valid.values()) else {}
@@ -469,7 +467,7 @@ async def read_and_store_with_instance(sps30_instance: SPS30):
         return
 
     sps30_data = SPS30Model(
-        timestamp=datetime.now().isoformat(),
+        timestamp=utc_timestamp(),
         pm10=data["sensor_data"]["mass_density"]["pm1.0"],
         pm25=data["sensor_data"]["mass_density"]["pm2.5"],
         pm40=data["sensor_data"]["mass_density"]["pm4.0"],
@@ -484,3 +482,5 @@ async def read_and_store_with_instance(sps30_instance: SPS30):
     session = get_session()
     session.add(sps30_data)
     session.commit()
+
+    logging.info("Sampled SPS30")

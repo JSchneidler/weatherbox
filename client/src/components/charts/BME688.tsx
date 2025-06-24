@@ -27,16 +27,13 @@ const BME688 = ({
   isLoading: boolean;
   error: Error | null;
 }) => {
-  const processedBme688Data = bme688Data
-    .slice()
-    .reverse()
-    .map((item: Bme688Item) => ({
-      date: formatTimestamp(item.timestamp),
-      temperature: item.temperature,
-      humidity: item.humidity,
-      pressure: item.pressure,
-      gas: item.gas,
-    }));
+  const processedBme688Data = bme688Data.map((item: Bme688Item) => ({
+    date: formatTimestamp(item.timestamp),
+    temperature: item.temperature,
+    humidity: item.humidity,
+    pressure: item.pressure,
+    gas: item.gas,
+  }));
 
   return (
     <Paper p="md" withBorder>

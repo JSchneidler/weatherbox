@@ -41,22 +41,19 @@ const AS7341 = ({
   isLoading: boolean;
   error: Error | null;
 }) => {
-  const processedAs7341Data = as7341Data
-    .slice()
-    .reverse()
-    .map((item: As7341Item) => ({
-      date: formatTimestamp(item.timestamp),
-      violet: item.violet,
-      indigo: item.indigo,
-      blue: item.blue,
-      cyan: item.cyan,
-      green: item.green,
-      yellow: item.yellow,
-      orange: item.orange,
-      red: item.red,
-      clear: item.clear,
-      nir: item.nir,
-    }));
+  const processedAs7341Data = as7341Data.map((item: As7341Item) => ({
+    date: formatTimestamp(item.timestamp),
+    violet: item.violet,
+    indigo: item.indigo,
+    blue: item.blue,
+    cyan: item.cyan,
+    green: item.green,
+    yellow: item.yellow,
+    orange: item.orange,
+    red: item.red,
+    clear: item.clear,
+    nir: item.nir,
+  }));
 
   return (
     <Paper p="md" withBorder>

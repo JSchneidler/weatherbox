@@ -39,14 +39,14 @@ function App() {
             <Title order={3}>Time Range</Title>
             <Group>
               <DateTimePicker
-                label="Start DateTime"
+                label="Start"
                 placeholder="Pick start date and time"
                 value={startDate}
                 onChange={(value) => setStartDate(value)}
                 clearable
               />
               <DateTimePicker
-                label="End DateTime"
+                label="End"
                 placeholder="Pick end date and time"
                 value={endDate}
                 onChange={(value) => setEndDate(value)}

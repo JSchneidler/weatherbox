@@ -1,10 +1,9 @@
-from datetime import datetime
+import logging
 from typing import NamedTuple
 
 import adafruit_as7341
 
-
-from weatherbox.db import get_session
+from weatherbox.db import get_session, utc_timestamp
 from weatherbox.models import AS7341
 from weatherbox.sensors.i2c_manager import get_i2c_bus, i2c_manager
 
@@ -48,7 +47,7 @@ async def read_and_store():
     data = await read()
 
     as7341_data = AS7341(
-        timestamp=datetime.now().isoformat(),
+        timestamp=utc_timestamp(),
         violet=data.violet,
         indigo=data.indigo,
         blue=data.blue,
@@ -63,3 +62,5 @@ async def read_and_store():
     session = get_session()
     session.add(as7341_data)
     session.commit()
+
+    logging.info("Sampled AS7341")

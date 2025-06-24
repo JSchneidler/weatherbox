@@ -1,7 +1,7 @@
 import useSWR from "swr";
-import { format } from "date-fns";
 
-const fetcher = (...args) => fetch(...args).then((res) => res.json());
+const fetcher = (...args: Parameters<typeof fetch>) =>
+  fetch(...args).then((res) => res.json());
 
 interface UseDataParams {
   startDate?: Date | null;
@@ -23,11 +23,13 @@ export function useSensorData({ startDate, endDate }: UseDataParams) {
   const params = new URLSearchParams();
 
   if (startDate) {
-    params.append("start_date", format(startDate, "yyyy-MM-dd'T'HH:mm:ss"));
+    console.log("startDate", startDate);
+    params.append("start_date", startDate.toISOString());
   }
 
   if (endDate) {
-    params.append("end_date", format(endDate, "yyyy-MM-dd'T'HH:mm:ss"));
+    console.log("endDate", endDate);
+    params.append("end_date", endDate.toISOString());
   }
 
   if (params.toString()) {

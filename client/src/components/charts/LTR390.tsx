@@ -23,14 +23,11 @@ const LTR390 = ({
   isLoading: boolean;
   error: Error | null;
 }) => {
-  const processedLtr390Data = ltr390Data
-    .slice()
-    .reverse()
-    .map((item: Ltr390Item) => ({
-      date: formatTimestamp(item.timestamp),
-      light: item.light,
-      uvs: item.uvs,
-    }));
+  const processedLtr390Data = ltr390Data.map((item: Ltr390Item) => ({
+    date: formatTimestamp(item.timestamp),
+    light: item.light,
+    uvs: item.uvs,
+  }));
 
   return (
     <Paper p="md" withBorder>

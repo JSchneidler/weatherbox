@@ -39,22 +39,19 @@ const SPS30 = ({
   isLoading: boolean;
   error: Error | null;
 }) => {
-  const processedSps30Data = sps30Data
-    .slice()
-    .reverse()
-    .map((item: Sps30Item) => ({
-      date: formatTimestamp(item.timestamp),
-      pm10: item.pm10,
-      pm25: item.pm25,
-      pm40: item.pm40,
-      pm100: item.pm100,
-      nc05: item.nc05,
-      nc10: item.nc10,
-      nc25: item.nc25,
-      nc40: item.nc40,
-      nc100: item.nc100,
-      typical_particle_size: item.typical_particle_size,
-    }));
+  const processedSps30Data = sps30Data.map((item: Sps30Item) => ({
+    date: formatTimestamp(item.timestamp),
+    pm10: item.pm10,
+    pm25: item.pm25,
+    pm40: item.pm40,
+    pm100: item.pm100,
+    nc05: item.nc05,
+    nc10: item.nc10,
+    nc25: item.nc25,
+    nc40: item.nc40,
+    nc100: item.nc100,
+    typical_particle_size: item.typical_particle_size,
+  }));
 
   return (
     <Paper p="md" withBorder>
