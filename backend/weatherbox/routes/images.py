@@ -1,8 +1,10 @@
-from typing import Optional
+from typing import Literal, Optional
+import io
 
-from fastapi import APIRouter, Query
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Query, Path
+from fastapi.responses import StreamingResponse
 from sqlmodel import col, func, select
+from PIL import Image
 
 from weatherbox.db import get_session
 from weatherbox.models import TimelapseImage
@@ -52,8 +54,22 @@ def get_images(
     }
 
 
-@router.get("/{image_id}/thumbnail")
-def get_image(image_id: int):
+@router.get("/{image_id}")
+def get_image(
+    image_id: int = Path(..., description="The ID of the image to get"),
+    size: Literal["small", "medium", "large"] = Query(
+        "small", description="Size of the image to return (small, medium, large)"
+    ),
+    format: Literal["jpeg", "png"] = Query(
+        "jpeg", description="Format of the image to return (jpeg, png)"
+    ),
+    quality: int = Query(
+        80,
+        description="Quality of the image to return (0-100)",
+        ge=0,
+        le=100,
+    ),
+):
     """
     Get a specific image by its ID.
     """
@@ -63,8 +79,18 @@ def get_image(image_id: int):
     if not image:
         return {"error": "Image not found"}, 404
 
-    return FileResponse(
-        f"{IMAGE_DIR}/{image.file_name}",
-        media_type="image/jpeg",
-        filename=image.file_name,
-    )
+    img = Image.open(f"{IMAGE_DIR}/{image.file_name}")
+
+    if size == "small":
+        img = img.resize((320, 240))
+    elif size == "medium":
+        img = img.resize((640, 480))
+    elif size == "large":
+        img = img.resize((1280, 960))
+
+    # Convert to bytes
+    img_buffer = io.BytesIO()
+    img.save(img_buffer, format=format, quality=quality, optimize=True)
+    img_buffer.seek(0)
+
+    return StreamingResponse(img_buffer, media_type=f"image/{format.lower()}")
