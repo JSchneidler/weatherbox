@@ -8,7 +8,8 @@ import {
   Title,
   Progress,
 } from "@mantine/core";
-import { useSystemStats } from "../hooks";
+
+import { useSystemStats, useSensorsStatus } from "../hooks";
 
 const formatUptime = (bootTime: number) => {
   const now = Date.now() / 1000;
@@ -26,6 +27,21 @@ const formatUptime = (bootTime: number) => {
   }
 };
 
+const SensorStatus = ({ name, status }: { name: string; status: string }) => {
+  let color = "green";
+  if (status === "disabled") color = "gray";
+  if (status === "error") color = "red";
+  if (status === "initializing") color = "yellow";
+  if (status === "ready") color = "green";
+
+  return (
+    <Group>
+      <Text size="sm">{name}</Text>
+      <Badge color={color}>{status}</Badge>
+    </Group>
+  );
+};
+
 const SystemHealth = () => {
   const {
     data: systemStats,
@@ -33,15 +49,21 @@ const SystemHealth = () => {
     isLoading: systemLoading,
   } = useSystemStats();
 
+  const {
+    data: sensorsStatus,
+    error: sensorsStatusError,
+    isLoading: sensorsStatusLoading,
+  } = useSensorsStatus();
+
   return (
     <Paper p="md" withBorder mt="md">
       <Stack gap="md">
         <Title order={4}>System Status</Title>
-        {systemLoading ? (
+        {systemLoading || sensorsStatusLoading ? (
           <Text size="sm" c="dimmed">
             Loading system stats...
           </Text>
-        ) : systemStats ? (
+        ) : systemStats && sensorsStatus ? (
           <Grid gutter="lg">
             {/* Performance Metrics */}
             <Grid.Col span={6}>
@@ -167,6 +189,20 @@ const SystemHealth = () => {
                     {formatUptime(systemStats.uptime)}
                   </Badge>
                 </Group>
+              </Stack>
+            </Grid.Col>
+
+            {/* Sensors Status */}
+            <Grid.Col span={12}>
+              <Stack gap="xs">
+                <Title order={6}>Sensors</Title>
+                <Stack gap="xs">
+                  {Object.entries(sensorsStatus.sensors).map(
+                    ([name, status]) => (
+                      <SensorStatus key={name} name={name} status={status} />
+                    )
+                  )}
+                </Stack>
               </Stack>
             </Grid.Col>
           </Grid>
