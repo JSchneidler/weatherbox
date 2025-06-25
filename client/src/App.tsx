@@ -7,13 +7,17 @@ import {
   Stack,
   Group,
   Container,
+  Modal,
+  Button,
 } from "@mantine/core";
 import { DateTimePicker } from "@mantine/dates";
+import { useDisclosure } from "@mantine/hooks";
 import { useState } from "react";
 
 import { useSensorData } from "./hooks";
 
 import SystemHealth from "./components/SystemHealth";
+import Settings from "./components/Settings";
 import { AS7341, BME688, ENS160, LTR390, SPS30 } from "./components/charts";
 
 import "@mantine/core/styles.css";
@@ -23,6 +27,7 @@ import "@mantine/dates/styles.css";
 function App() {
   const [startDate, setStartDate] = useState<string | null>(null);
   const [endDate, setEndDate] = useState<string | null>(null);
+  const [opened, { open, close }] = useDisclosure(false);
 
   // Single hook for all sensor data
   const { data, error, isLoading } = useSensorData({
@@ -32,28 +37,41 @@ function App() {
 
   return (
     <MantineProvider defaultColorScheme="dark">
-      <Container size="xl" py="md">
-        {/* DateTime Range Picker */}
+      <Modal opened={opened} onClose={close} title="Settings" size="xl">
+        <Settings />
+      </Modal>
+
+      <Container size="xxl" py="md">
         <Paper p="md" withBorder mb="md">
-          <Stack gap="xs">
-            <Title order={3}>Time Range</Title>
-            <Group>
-              <DateTimePicker
-                label="Start"
-                placeholder="Pick start date and time"
-                value={startDate}
-                onChange={(value) => setStartDate(value)}
-                clearable
-              />
-              <DateTimePicker
-                label="End"
-                placeholder="Pick end date and time"
-                value={endDate}
-                onChange={(value) => setEndDate(value)}
-                clearable
-              />
-            </Group>
-          </Stack>
+          <Grid gutter="md">
+            <Grid.Col span={6}>
+              <Stack gap="xs">
+                <Title order={3}>Time Range</Title>
+                <Group>
+                  <DateTimePicker
+                    label="Start"
+                    placeholder="Start date and time"
+                    value={startDate}
+                    onChange={setStartDate}
+                    clearable
+                  />
+                  <DateTimePicker
+                    label="End"
+                    placeholder="End date and time"
+                    value={endDate}
+                    onChange={setEndDate}
+                    clearable
+                  />
+                </Group>
+              </Stack>
+            </Grid.Col>
+            <Grid.Col
+              span={6}
+              style={{ display: "flex", justifyContent: "flex-end" }}
+            >
+              <Button onClick={open}>Settings</Button>
+            </Grid.Col>
+          </Grid>
         </Paper>
 
         <Grid gutter="md">

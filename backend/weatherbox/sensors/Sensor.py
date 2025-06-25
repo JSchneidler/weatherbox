@@ -58,7 +58,7 @@ class Sensor(ABC):
         Returns a dictionary containing sensor settings.
         """
         return {
-            "disabled": self.status == SensorStatus.DISABLED,
+            "enabled": self.status != SensorStatus.DISABLED,
         }
 
     @abstractmethod
@@ -99,5 +99,5 @@ class I2CSensor(Sensor):
         return {
             **super().get_settings(),
             "i2c_bus": self.i2c_bus,
-            "i2c_address": self.i2c_address,
+            "i2c_address": hex(self.i2c_address),
         }

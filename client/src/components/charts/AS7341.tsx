@@ -17,8 +17,6 @@ interface As7341Item {
   nir: number;
 }
 
-// Process AS7341 data
-
 const as7341Series = [
   { name: "violet", color: "violet.6" },
   { name: "indigo", color: "indigo.6" },

@@ -6,7 +6,14 @@ from fastapi.responses import StreamingResponse
 import psutil
 import uvicorn
 
-from weatherbox.scheduler import initialize_and_start_scheduler, shutdown_scheduler
+from weatherbox.sensors.Sensor import Sensor
+from weatherbox.sensor_manager import sensor_manager
+from weatherbox.scheduler import (
+    initialize_and_start_scheduler,
+    shutdown_scheduler,
+    get_interval,
+)
+from weatherbox.timelapse import TIMELAPSE_DISABLED
 
 # from weatherbox.camera.stream import generate_frames
 from weatherbox.routes.sensors import router as sensors
@@ -45,6 +52,13 @@ def health_check():
     return {"status": "ok", "message": "WeatherBox service is running."}
 
 
+# @app.get("/mjpeg")
+# async def mjpeg():
+#     return StreamingResponse(
+#         generate_frames(), media_type="multipart/x-mixed-replace; boundary=frame"
+#     )
+
+
 @app.get("/system/stats")
 def get_system_stats():
     """
@@ -60,11 +74,29 @@ def get_system_stats():
     }
 
 
-# @app.get("/mjpeg")
-# async def mjpeg():
-#     return StreamingResponse(
-#         generate_frames(), media_type="multipart/x-mixed-replace; boundary=frame"
-#     )
+@app.get("/settings")
+def get_sensor_settings():
+    """
+    Get the current settings for all sensors.
+    """
+
+    settings = {
+        sensor.name: getSensorSettings(sensor) for sensor in sensor_manager.sensors
+    }
+
+    settings["timelapse"] = {
+        "enabled": not TIMELAPSE_DISABLED,
+        "interval": get_interval("timelapse"),
+    }
+
+    return settings
+
+
+def getSensorSettings(sensor: Sensor):
+    return {
+        **sensor.get_settings(),
+        "sample_interval": get_interval(sensor.name),
+    }
 
 
 def start_server():

@@ -1,9 +1,8 @@
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import logging
-import os
 
 from weatherbox.sensor_manager import sensor_manager
-from weatherbox.timelapse import capture
+from weatherbox.timelapse import capture, TIMELAPSE_DISABLED
 
 INTERVALS = {
     "AS7341": 30,
@@ -11,7 +10,7 @@ INTERVALS = {
     "ENS160": 30,
     "LTR390": 30,
     "SPS30": 30,
-    "Timelapse": 60,
+    "timelapse": 60,
 }
 
 scheduler = AsyncIOScheduler(
@@ -55,8 +54,8 @@ async def initialize_and_start_scheduler():
         )
         logging.info(f"{sensor.name} scheduled with interval {interval} seconds.")
 
-    if not os.getenv("TIMELAPSE_DISABLED", "false").lower() == "true":
-        interval = get_interval("Timelapse")
+    if not TIMELAPSE_DISABLED:
+        interval = get_interval("timelapse")
         scheduler.add_job(
             capture,
             "interval",

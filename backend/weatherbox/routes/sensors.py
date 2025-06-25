@@ -6,8 +6,6 @@ from pydantic import BaseModel
 from weatherbox.db import get_session
 from weatherbox.models import AS7341, BME688, ENS160, LTR390, SPS30
 from weatherbox.sensor_manager import sensor_manager
-from weatherbox.sensors.Sensor import Sensor, SensorStatus
-from weatherbox.scheduler import get_interval
 
 router = APIRouter()
 
@@ -103,19 +101,3 @@ def get_sensor_data(
         ens160=_query_sensor_data(ENS160, session, start_date, end_date, limit),
         sps30=_query_sensor_data(SPS30, session, start_date, end_date, limit),
     )
-
-
-@router.get("/settings")
-def get_sensor_settings():
-    """
-    Get the current settings for all sensors.
-    """
-
-    return {sensor.name: getSettings(sensor) for sensor in sensor_manager.sensors}
-
-
-def getSettings(sensor: Sensor):
-    return {
-        **sensor.get_settings(),
-        "sample_interval": get_interval(sensor.name),
-    }

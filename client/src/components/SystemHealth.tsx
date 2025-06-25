@@ -167,20 +167,6 @@ const SystemHealth = () => {
                     {formatUptime(systemStats.uptime)}
                   </Badge>
                 </Group>
-
-                <Group justify="space-between">
-                  <Text size="sm">Fan Speed</Text>
-                  <Badge variant="light" color="blue">
-                    {systemStats.fan_rpm.toLocaleString()} RPM
-                  </Badge>
-                </Group>
-
-                <Group justify="space-between">
-                  <Text size="sm">Uptime</Text>
-                  <Badge variant="light" color="blue">
-                    {formatUptime(systemStats.uptime)}
-                  </Badge>
-                </Group>
               </Stack>
             </Grid.Col>
           </Grid>
