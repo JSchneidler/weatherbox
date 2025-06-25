@@ -60,22 +60,12 @@ export function useSensorData({ startDate, endDate }: UseDataParams) {
   let url = `http://${window.location.hostname}:8000/sensors/data`;
   const params = new URLSearchParams();
 
-  if (startDate) {
-    console.log("startDate", startDate);
-    params.append("start_date", startDate.toISOString());
-  }
+  if (startDate) params.append("start_date", startDate.toISOString());
+  if (endDate) params.append("end_date", endDate.toISOString());
 
-  if (endDate) {
-    console.log("endDate", endDate);
-    params.append("end_date", endDate.toISOString());
-  }
-
-  if (params.toString()) {
-    url += `?${params.toString()}`;
-  }
+  if (params.toString()) url += `?${params.toString()}`;
 
   const { data, error, isLoading } = useSWR(url, fetcher);
-
   return { data, error, isLoading };
 }
 
@@ -84,7 +74,6 @@ export function useSystemStats() {
   const { data, error, isLoading } = useSWR<SystemStats>(url, fetcher, {
     refreshInterval: 5000, // Refresh every 5 seconds
   });
-
   return { data, error, isLoading };
 }
 
@@ -93,6 +82,5 @@ export function useSettings() {
   const { data, error, isLoading } = useSWR<Settings>(url, fetcher, {
     refreshInterval: 5000, // Refresh every 5 seconds
   });
-
   return { data, error, isLoading };
 }

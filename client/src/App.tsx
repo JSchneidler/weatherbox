@@ -21,7 +21,6 @@ import Settings from "./components/Settings";
 import { AS7341, BME688, ENS160, LTR390, SPS30 } from "./components/charts";
 
 import "@mantine/core/styles.css";
-import "@mantine/charts/styles.css";
 import "@mantine/dates/styles.css";
 
 function App() {
@@ -75,15 +74,6 @@ function App() {
         </Paper>
 
         <Grid gutter="md">
-          {/* SPS30 - Air Quality Sensor */}
-          <Grid.Col span={6}>
-            <SPS30
-              sps30Data={data?.sps30 || []}
-              isLoading={isLoading}
-              error={error}
-            />
-          </Grid.Col>
-
           {/* AS7341 - Color Sensor */}
           <Grid.Col span={6}>
             <AS7341
@@ -102,6 +92,15 @@ function App() {
             />
           </Grid.Col>
 
+          {/* ENS160 - Air Quality Index */}
+          <Grid.Col span={6}>
+            <ENS160
+              ens160Data={data?.ens160 || []}
+              isLoading={isLoading}
+              error={error}
+            />
+          </Grid.Col>
+
           {/* LTR390 - Light & UV Sensor */}
           <Grid.Col span={6}>
             <LTR390
@@ -111,10 +110,10 @@ function App() {
             />
           </Grid.Col>
 
-          {/* ENS160 - Air Quality Index */}
+          {/* SPS30 - Air Quality Sensor */}
           <Grid.Col span={6}>
-            <ENS160
-              ens160Data={data?.ens160 || []}
+            <SPS30
+              sps30Data={data?.sps30 || []}
               isLoading={isLoading}
               error={error}
             />

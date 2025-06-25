@@ -1,7 +1,8 @@
-import { LineChart } from "@mantine/charts";
 import { Paper, Stack, Title, Text } from "@mantine/core";
 
+import LineChart from "./LineChart";
 import { formatTimestamp } from "../../util";
+import { memo, useMemo } from "react";
 
 interface Ens160Item {
   timestamp: string;
@@ -11,9 +12,9 @@ interface Ens160Item {
 }
 
 const ens160Series = [
-  { name: "aqi", color: "blue.6", yAxisId: "right" },
-  { name: "tvoc", color: "red.6" },
-  { name: "eco2", color: "green.6" },
+  { key: "aqi", name: "AQI", color: "rgb(255, 193, 7)", yAxisID: "y1" }, // Light mode: rgb(255, 152, 0)
+  { key: "tvoc", name: "TVOC (ppb)", color: "rgb(156, 39, 176)" }, // Light mode: rgb(142, 36, 170)
+  { key: "eco2", name: "eCO2 (ppm)", color: "rgb(76, 175, 80)" }, // Light mode: rgb(56, 142, 60)
 ];
 
 const ENS160 = ({
@@ -25,36 +26,32 @@ const ENS160 = ({
   isLoading: boolean;
   error: Error | null;
 }) => {
-  const processedEns160Data = ens160Data.map((item: Ens160Item) => ({
-    date: formatTimestamp(item.timestamp),
-    aqi: item.aqi,
-    tvoc: item.tvoc,
-    eco2: item.eco2,
-  }));
+  const processedEns160Data = useMemo(
+    () =>
+      ens160Data.map((item: Ens160Item) => ({
+        date: formatTimestamp(item.timestamp),
+        ...item,
+      })),
+    [ens160Data]
+  );
 
   return (
     <Paper p="md" withBorder>
       <Stack gap="xs">
         <Title order={3}>ENS160 - Air Quality Index</Title>
-        <Text size="sm" c="dimmed">
-          AQI | TVOC (ppb) | eCO2 (ppm)
-        </Text>
         {isLoading ? (
           <Text>Loading ENS160 data...</Text>
         ) : error ? (
           <Text c="red">Error loading data: {error.message}</Text>
         ) : (
           <LineChart
-            h={400}
-            data={processedEns160Data}
-            dataKey="date"
-            series={ens160Series}
-            curveType="linear"
-            withDots={false}
-            withRightYAxis
-            yAxisProps={{ label: "TVOC (ppb) / eCO2 (ppm)" }}
-            xAxisProps={{ label: "Time" }}
-            withLegend
+            labels={processedEns160Data.map((data) => data.date)}
+            data={ens160Series.map((series) => ({
+              label: series.name,
+              data: processedEns160Data.map((data) => data[series.key]),
+              borderColor: series.color,
+              yAxisID: series.yAxisID,
+            }))}
           />
         )}
       </Stack>
@@ -62,4 +59,4 @@ const ENS160 = ({
   );
 };
 
-export default ENS160;
+export default memo(ENS160);

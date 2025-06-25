@@ -1,7 +1,8 @@
-import { LineChart } from "@mantine/charts";
 import { Paper, Stack, Title, Text } from "@mantine/core";
 
+import LineChart from "./LineChart";
 import { formatTimestamp } from "../../util";
+import { memo, useMemo } from "react";
 
 interface Ltr390Item {
   timestamp: string;
@@ -10,8 +11,8 @@ interface Ltr390Item {
 }
 
 const ltr390Series = [
-  { name: "light", color: "blue.6" },
-  { name: "uvs", color: "red.6", yAxisId: "right" },
+  { key: "light", name: "Light (lux)", color: "rgb(186, 85, 211)" }, // Light mode: rgb(147, 112, 219)
+  { key: "uvs", name: "UVS", color: "rgb(255, 235, 59)", yAxisID: "y1" }, // Light mode: rgb(255, 193, 7)
 ];
 
 const LTR390 = ({
@@ -23,35 +24,32 @@ const LTR390 = ({
   isLoading: boolean;
   error: Error | null;
 }) => {
-  const processedLtr390Data = ltr390Data.map((item: Ltr390Item) => ({
-    date: formatTimestamp(item.timestamp),
-    light: item.light,
-    uvs: item.uvs,
-  }));
+  const processedLtr390Data = useMemo(
+    () =>
+      ltr390Data.map((item: Ltr390Item) => ({
+        date: formatTimestamp(item.timestamp),
+        ...item,
+      })),
+    [ltr390Data]
+  );
 
   return (
     <Paper p="md" withBorder>
       <Stack gap="xs">
         <Title order={3}>LTR390 - Light & UV Sensor</Title>
-        <Text size="sm" c="dimmed">
-          Light (lux) | UV Index
-        </Text>
         {isLoading ? (
           <Text>Loading LTR390 data...</Text>
         ) : error ? (
           <Text c="red">Error loading data: {error.message}</Text>
         ) : (
           <LineChart
-            h={400}
-            data={processedLtr390Data}
-            dataKey="date"
-            series={ltr390Series}
-            curveType="linear"
-            withDots={false}
-            withRightYAxis
-            yAxisProps={{ label: "Light (lux)" }}
-            xAxisProps={{ label: "Time" }}
-            withLegend
+            labels={processedLtr390Data.map((data) => data.date)}
+            data={ltr390Series.map((series) => ({
+              label: series.name,
+              data: processedLtr390Data.map((data) => data[series.key]),
+              borderColor: series.color,
+              yAxisID: series.yAxisID,
+            }))}
           />
         )}
       </Stack>
@@ -59,4 +57,4 @@ const LTR390 = ({
   );
 };
 
-export default LTR390;
+export default memo(LTR390);
