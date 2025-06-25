@@ -45,7 +45,7 @@ const BME688 = ({
   return (
     <Paper p="md" withBorder>
       <Stack gap="xs">
-        <Title order={3}>BME688 - Environmental Sensor</Title>
+        <Title order={3}>BME688 - Environmental</Title>
         {isLoading ? (
           <Text>Loading BME688 data...</Text>
         ) : error ? (

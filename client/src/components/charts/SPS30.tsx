@@ -57,7 +57,7 @@ const SPS30 = ({
   return (
     <Paper p="md" withBorder>
       <Stack gap="xs">
-        <Title order={3}>SPS30 - Air Quality Sensor</Title>
+        <Title order={3}>SPS30 - Air Quality</Title>
         {isLoading ? (
           <Text>Loading SPS30 data...</Text>
         ) : error ? (

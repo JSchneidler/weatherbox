@@ -36,7 +36,7 @@ const LTR390 = ({
   return (
     <Paper p="md" withBorder>
       <Stack gap="xs">
-        <Title order={3}>LTR390 - Light & UV Sensor</Title>
+        <Title order={3}>LTR390 - Light & UV</Title>
         {isLoading ? (
           <Text>Loading LTR390 data...</Text>
         ) : error ? (

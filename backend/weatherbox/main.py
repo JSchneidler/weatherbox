@@ -14,8 +14,7 @@ from weatherbox.scheduler import (
     get_interval,
 )
 from weatherbox.timelapse import TIMELAPSE_DISABLED
-
-# from weatherbox.camera.stream import generate_frames
+from weatherbox.camera.stream import generate_frames
 from weatherbox.routes.sensors import router as sensors
 from weatherbox.routes.images import router as images
 
@@ -52,11 +51,11 @@ def health_check():
     return {"status": "ok", "message": "WeatherBox service is running."}
 
 
-# @app.get("/mjpeg")
-# async def mjpeg():
-#     return StreamingResponse(
-#         generate_frames(), media_type="multipart/x-mixed-replace; boundary=frame"
-#     )
+@app.get("/mjpeg")
+async def mjpeg():
+    return StreamingResponse(
+        generate_frames(), media_type="multipart/x-mixed-replace; boundary=frame"
+    )
 
 
 @app.get("/system/stats")

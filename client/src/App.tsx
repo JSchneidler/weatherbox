@@ -74,28 +74,28 @@ function App() {
         </Paper>
 
         <Grid gutter="md">
-          {/* AS7341 - Color Sensor */}
-          <Grid.Col span={6}>
-            <AS7341
-              as7341Data={data?.as7341 || []}
-              isLoading={isLoading}
-              error={error}
-            />
-          </Grid.Col>
-
-          {/* BME688 - Environmental Sensor */}
-          <Grid.Col span={6}>
-            <BME688
-              bme688Data={data?.bme688 || []}
-              isLoading={isLoading}
-              error={error}
-            />
-          </Grid.Col>
-
           {/* ENS160 - Air Quality Index */}
           <Grid.Col span={6}>
             <ENS160
               ens160Data={data?.ens160 || []}
+              isLoading={isLoading}
+              error={error}
+            />
+          </Grid.Col>
+
+          {/* SPS30 - Air Quality Sensor */}
+          <Grid.Col span={6}>
+            <SPS30
+              sps30Data={data?.sps30 || []}
+              isLoading={isLoading}
+              error={error}
+            />
+          </Grid.Col>
+
+          {/* AS7341 - Color Sensor */}
+          <Grid.Col span={6}>
+            <AS7341
+              as7341Data={data?.as7341 || []}
               isLoading={isLoading}
               error={error}
             />
@@ -109,11 +109,11 @@ function App() {
               error={error}
             />
           </Grid.Col>
+          {/* BME688 - Environmental Sensor */}
 
-          {/* SPS30 - Air Quality Sensor */}
           <Grid.Col span={6}>
-            <SPS30
-              sps30Data={data?.sps30 || []}
+            <BME688
+              bme688Data={data?.bme688 || []}
               isLoading={isLoading}
               error={error}
             />
@@ -132,7 +132,7 @@ function App() {
                   alt="WeatherBox Camera Feed"
                   style={{
                     width: "100%",
-                    height: "400px",
+                    height: "600px",
                     objectFit: "cover",
                   }}
                 />

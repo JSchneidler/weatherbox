@@ -38,7 +38,7 @@ const ENS160 = ({
   return (
     <Paper p="md" withBorder>
       <Stack gap="xs">
-        <Title order={3}>ENS160 - Air Quality Index</Title>
+        <Title order={3}>ENS160 - Air Quality</Title>
         {isLoading ? (
           <Text>Loading ENS160 data...</Text>
         ) : error ? (

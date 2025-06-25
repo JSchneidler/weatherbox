@@ -52,7 +52,7 @@ const AS7341 = ({
   return (
     <Paper p="md" withBorder>
       <Stack gap="xs">
-        <Title order={3}>AS7341 - Color Sensor</Title>
+        <Title order={3}>AS7341 - Color Spectrum</Title>
         {isLoading ? (
           <Text>Loading AS7341 data...</Text>
         ) : error ? (
